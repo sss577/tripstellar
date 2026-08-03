@@ -2315,7 +2315,7 @@ const buildMarkerContent = (dayNo: number, stopNo: number): string => {
   return `
     <div class="tripstar-map-marker">
       <span class="tripstar-map-marker__core" aria-hidden="true">
-        <svg fill="#ffffff" width="30px" height="30px" viewBox="0 0 256 256" id="Flat" xmlns="http://www.w3.org/2000/svg">
+        <svg class="tripstar-map-marker__icon" fill="currentColor" width="30px" height="30px" viewBox="0 0 256 256" id="Flat" xmlns="http://www.w3.org/2000/svg">
           <path d="M231.4248,109.2041,169.36426,86.63574,146.7959,24.57422a19.99984,19.99984,0,0,0-37.5918.001L86.63574,86.63574,24.57422,109.2041a19.99984,19.99984,0,0,0,.001,37.5918l62.06054,22.56836,22.56836,62.06152a19.99984,19.99984,0,0,0,37.5918-.001l22.56836-62.06054,62.06152-22.56836a19.99984,19.99984,0,0,0-.001-37.5918Zm-72.01562,38.24219a19.95591,19.95591,0,0,0-11.96289,11.96289l.001-.001L128,212.88672l-19.44629-53.47754A19.95279,19.95279,0,0,0,96.5918,147.44727L43.11328,128l53.47754-19.44629A19.95279,19.95279,0,0,0,108.55273,96.5918L128,43.11328l19.44629,53.47754a19.95279,19.95279,0,0,0,11.96191,11.96191L212.88672,128Z"/>
         </svg>
       </span>
@@ -2382,15 +2382,15 @@ const ROUTE_STYLE_PRESETS: Record<
     borderWeight: 0.8,
   },
   straight: {
-    strokeColor: '#ffffff',
-    strokeWeight: 1.5,
-    strokeOpacity: 0.62,
-    strokeStyle: 'solid',
-    strokeDasharray: [10, 10],
+    strokeColor: '#ff8a3d',
+    strokeWeight: 3,
+    strokeOpacity: 0.94,
+    strokeStyle: 'dashed',
+    strokeDasharray: [12, 8],
     lineJoin: 'round',
     lineCap: 'round',
-    outlineColor: 'rgba(33, 17, 8, 0.45)',
-    borderWeight: 0.8,
+    outlineColor: 'rgba(39, 20, 8, 0.72)',
+    borderWeight: 1.2,
   },
 }
 
@@ -2729,9 +2729,9 @@ const drawGoogleRoutes = async (attractions: any[]) => {
       if (preferredMode === 'straight') {
         const poly = new google.maps.Polyline({
           path: [origin, destination],
-          strokeColor: '#ffffff',
-          strokeWeight: 1.5,
-          strokeOpacity: 0.62,
+          strokeColor: '#ff8a3d',
+          strokeWeight: 3,
+          strokeOpacity: 0.94,
           map: googleMap,
           zIndex: 90,
         })
@@ -2761,9 +2761,9 @@ const drawGoogleRoutes = async (attractions: any[]) => {
         console.warn('Google 路线规划失败, 降级为直线:', err)
         const poly = new google.maps.Polyline({
           path: [origin, destination],
-          strokeColor: '#ffffff',
-          strokeWeight: 1.5,
-          strokeOpacity: 0.62,
+          strokeColor: '#ff8a3d',
+          strokeWeight: 3,
+          strokeOpacity: 0.94,
           map: googleMap,
           zIndex: 90,
         })
@@ -2793,7 +2793,7 @@ const initAMap = async () => {
       zoom: 12,
       center: [116.397128, 39.916527], // 默认中心点(北京)
       viewMode: '3D',
-      mapStyle: 'amap://styles/darkblue',
+      mapStyle: 'amap://styles/normal',
       // 开启 preserveDrawingBuffer 才能让 html2canvas 在 WebGL 下截屏成功！
       WebGLParams: {
         preserveDrawingBuffer: true
@@ -4115,6 +4115,11 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   padding: 0;
 }
 
+#google-map-container,
+#amap-container {
+  background: #16212b;
+}
+
 /* 知识图谱卡片 */
 .kg-card {
   margin-top: 20px;
@@ -4580,48 +4585,52 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 .tripstar-map-marker {
   position: relative;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.35));
 }
 
 .tripstar-map-marker__core {
   position: relative;
   z-index: 1;
-  width: 20px;
-  height: 20px;
-  /* border-radius: 50%; */
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* background: rgba(0, 0, 0, 0.86);
-  border: 1.2px solid rgba(255, 255, 255, 0.82);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45); */
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff8a3d 0%, #d76e42 52%, #a14625 100%);
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 12px rgba(39, 20, 8, 0.45);
 }
 
 .tripstar-map-marker__icon {
-  width: 12px;
-  height: 12px;
-  stroke: #ffffff;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 
 .tripstar-map-marker__index {
   position: absolute;
-  top: calc(100% + 1px);
+  top: calc(100% - 8px);
   left: 50%;
   transform: translateX(-50%);
-  font-size: 15px;
-  font-weight: bold;
-  line-height: 1;
-  color: #ffffff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  min-width: 28px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #1f130b;
+  text-align: center;
+  background: rgba(255, 247, 239, 0.96);
+  border: 1px solid rgba(161, 70, 37, 0.55);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
   white-space: nowrap;
   pointer-events: none;
 }
