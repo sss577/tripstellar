@@ -65,7 +65,7 @@ graph TD
     subgraph G2 ["Backend Gateway"]
         B1["Async Polling <br/> POST/plan & GET/status"]
         B2["Contextual AI Q&A<br/>POST/chat/ask"]
-        B3["Attraction Image API<br/>GET/poi/photo"]
+        B3["Attraction Image API<br/>GET/poi/photo<br/>GET/poi/photo/file"]
     end
 
     subgraph G3 ["Multi-Agent Engine"]
@@ -121,7 +121,7 @@ Upon receiving natural language instructions, the Main Agent breaks down the tas
 1. **Xiaohongshu Attraction Extraction**: Searches city travel guide posts, extracts their text via an SSR scraper, and then uses the LLM to refine the lengthy travelogues into structured data: attraction names, authentic reviews, play durations, and reservation requirements. Finally, a POI search API is used to fetch precise coordinates.
 2. **Weather & Hotel**: The Weather agent queries the climate for the target dates; the Hotel agent finds suitable lodging options based on the budget.
 3. **Route Orchestration**: The Main Agent gathers third-party data, orchestrates the workflow, and calculates the distances and optimal visit orders to avoid backtracking.
-4. **Attraction Image Search (Frontend Driven)**: After generating the itinerary, the frontend independently calls the `/api/poi/photo` endpoint for each attraction. The backend then searches for the newest posts on Xiaohongshu based on the attraction name, scraping the direct link of the first image via SSR, ensuring an authentic real-life snapshot.
+4. **Attraction Image Search (Frontend Driven)**: After generating the itinerary, the frontend calls `/api/poi/photo` for each attraction. The backend checks `attraction_photo_cache` first; on a miss it searches the newest Xiaohongshu posts and scrapes the first image, then **immediately downloads the image bytes into the database** and returns a self-hosted URL (`/api/poi/photo/file`). The frontend `<img>` only ever talks to our own backend, so it is immune to Xiaohongshu CDN link expiry, hotlink protection, and mixed-content blocking.
 5. **Result Aggregation**: The final output is structured JSON encompassing budget details, daily schedules, reservation reminders, and anti-scam tips.
 
 ### 3. Data-Driven Dynamic Component Rendering

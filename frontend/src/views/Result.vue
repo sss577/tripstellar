@@ -1805,7 +1805,12 @@ const loadAttractionPhotos = async () => {
         )
         const data = await response.json()
         if (data.success && data.data.photo_url) {
-          attractionPhotos.value[name] = data.data.photo_url
+          const photoUrl = String(data.data.photo_url)
+          // 后端返回的是本站相对路径（/api/poi/photo/file?name=...），需补上 API 前缀；
+          // 同时兼容返回绝对地址的情况
+          attractionPhotos.value[name] = /^https?:\/\//i.test(photoUrl)
+            ? photoUrl
+            : `${apiBase}${photoUrl}`
         }
       } catch (err) {
         console.error(`获取${name}图片失败:`, err)
@@ -2007,12 +2012,12 @@ const buildExportHTML = (mapDataUrl: string = ''): string => {
   }
 
   // 底部二维码 — 项目开源地址
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent('https://github.com/1sdv/TripStar')}`
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent('https://github.com/sss577/tripstellar')}`
   const footerHTML = `
     <div style="text-align:center;padding:24px 16px 16px;border-top:1px solid #e8e8e8;margin-top:8px;">
       <img src="${qrUrl}" style="width:120px;height:120px;margin-bottom:10px;" crossorigin="anonymous" />
       <div style="font-size:13px;color:#C4703F;font-weight:600;margin-bottom:4px;">TripStellar</div>
-      <div style="font-size:11px;color:#aaa;">https://github.com/1sdv/TripStar</div>
+      <div style="font-size:11px;color:#aaa;">https://github.com/sss577/tripstellar</div>
       <div style="font-size:11px;color:#bbb;margin-top:6px;">${t('result.export.footer')}</div>
     </div>`
 

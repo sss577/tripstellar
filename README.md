@@ -12,8 +12,7 @@
 [🇨🇳 中文](README.md) | [🇺🇸 English](README_en.md)
 
 
-# 旅途星辰 - AI 旅行智能体
-**基于 HelloAgents 框架打造的多智能体协作文旅规划平台**
+# StarStellar
 </div>
 
 ---
@@ -25,7 +24,7 @@
 
 ## 本分支的改动
 
-本分支在上游 `v2.1.0` 的基础上做了以下四块工作。
+本分支在上游 `v2.1.0` 的基础上做了以下五块工作。
 
 ### 一、用户账号体系（新增）
 
@@ -63,6 +62,25 @@
 
 * 从版本控制中移除误提交的 `backend/node_modules`（288 个文件）。
 * 补充 `.gitignore` 规则：`node_modules/`、`*.db`。
+
+### 五、景点图片链路改造（修复）
+
+上游的实现是「把小红书返回的图片直链存进 SQLite，前端 `<img>` 直接连这个外链」。但小红书的 CDN 直链是**带签名的，有效期只有数小时**，而缓存有效期却设成了 7 天——于是打开几天前的旧行程时，缓存"命中"的其实是一个已经失效的地址，全部景点图片变成「图片加载失败」（实测：缓存 4 天的直链返回 `403 Forbidden`，当天缓存的新链接返回 `200`）。
+
+本分支把缓存对象从「链接」换成「**图片字节**」，前端不再接触小红书外链：
+
+| 改动 | 位置 |
+| --- | --- |
+| 缓存表新增 `photo_data` / `content_type` 字段 | `backend/app/models/db_models.py` |
+| 启动时自动为旧库 `ALTER TABLE` 补列 | `backend/app/database.py` |
+| 下载图片字节并落库 | `backend/app/api/routes/poi.py` → `_download_photo` / `_fetch_and_cache_photo` |
+| 新增字节流接口 `GET /api/poi/photo/file` | `backend/app/api/routes/poi.py` |
+| 前端为本站相对地址补 API 前缀 | `frontend/src/views/Result.vue` |
+
+* **不再受直链过期影响**：出图直接读库里的字节，`photo_url` 仅作排查留痕。
+* **顺带修掉混合内容隐患**：小红书给的直链是 `http://`，部署到 HTTPS 站点后会被浏览器按混合内容拦截。现在由后端统一转成 `https://` 下载（实测同一地址 https 同样返回 200）。
+* **缓存有效期 7 天 → 30 天**：字段含义从「图片还能不能用」变成「多久去小红书重抓一次」，不再敏感。
+* **旧数据自动自愈**：此前只存了链接、没有字节的记录，会在下次访问时自动重抓补齐，无需手工清库。
 
 ---
 
@@ -167,12 +185,16 @@ sequenceDiagram
     Route-->>Client: WebSocket 推送成功结果 (含 plan JSON 及 graph 拓扑)
     
     rect rgb(240, 255, 240)
-        Note over Client, XHS: 异步前端懒加载：景点图片搜图
+        Note over Client, XHS: 异步前端懒加载：景点图片
         Client->>POI: GET /api/poi/photo?name=xxx
+        POI->>POI: 查 attraction_photo_cache 字节缓存
+        Note right of POI: 命中则直接返回本站地址，跳过下面两步，避免反复调用签名引擎
         POI->>XHS: get_photo_from_xhs(keyword)
-        XHS->>XHS: 原生搜索 "xxx 风景" 获取首个有效笔记的第一张图 URL
-        XHS-->>POI: photo_url
-        POI-->>Client: 图片加载成功
+        XHS-->>POI: 带签名的临时直链（数小时后失效）
+        POI->>XHS: 立即下载图片字节并落库（http 统一转 https）
+        POI-->>Client: 返回本站地址 /api/poi/photo/file?name=xxx
+        Client->>POI: GET /api/poi/photo/file?name=xxx
+        POI-->>Client: 图片字节流（读库直出，不依赖外链）
     end
 ```
 
@@ -194,7 +216,7 @@ sequenceDiagram
 1. **小红书景点提取**: 搜索城市旅游攻略帖，通过 SSR 页面抓取获取帖子正文内容，再由 LLM 从长文游记中提纯出景点名称、真实评价、游玩时长以及是否需要提前预约等结构化信息，最后通过高德 POI 搜索接口补齐精准经纬度坐标。
 2. **天气与酒店**: 天气管家查询目标日期的气候状况；酒店专员根据预算寻找合适落脚点。
 3. **路线编排**: 主控 Agent 收集三方数据，进行统筹优化，计算两两景点间的距离和最优游玩顺序，避免行程折返跑。
-4. **景点搜图 (前端驱动)**: 行程生成完毕后，前端根据每个景点名称独立调用 `/api/poi/photo` 接口，后端以景点名搜索小红书最新发布的帖子，通过 SSR 抓取帖子首张图片直链，确保展示的是真实的风景实拍照。
+4. **景点搜图 (前端驱动)**: 行程生成完毕后，前端按景点名调用 `/api/poi/photo`；后端先查 `attraction_photo_cache`，未命中才搜索小红书最新帖子并抓取首张图片，**立即把图片字节下载落库**，返回本站地址 `/api/poi/photo/file`。前端 `<img>` 只请求本站接口，因此不受小红书直链失效、防盗链与 http 混合内容的影响。
 5. **结果聚合**: 最终输出包含预算明细、逐日行程、预约提醒、防坑指南等详细参数的结构化 JSON。
 
 ### 3. 数据驱动的动态组件渲染

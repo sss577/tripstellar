@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, LargeBinary, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -68,13 +68,19 @@ class TripTaskRecord(Base):
 class AttractionPhotoCache(Base):
     """景点图片缓存表
 
-    以景点名为主键缓存小红书搜到的图片直链，
-    避免重复请求时反复调用签名引擎（签名引擎有风控风险且耗时）。
+    以景点名为主键缓存景点图片，避免重复请求时反复调用签名引擎
+    （签名引擎有风控风险且耗时）。
+
+    注意真正用于出图的是 photo_data：小红书直链有效期只有数小时，
+    只缓存链接的话过期后会 403；直接缓存字节，前端就永远不依赖外链。
+    photo_url 仅作排查留痕，不参与取图。
     """
     __tablename__ = "attraction_photo_cache"
 
     name: Mapped[str] = mapped_column(String(255), primary_key=True)
     photo_url: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    photo_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    content_type: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
