@@ -26,6 +26,69 @@ const DEFAULT_RUNTIME_BACKEND_SETTINGS: BackendRuntimeSettings = {
 }
 
 export const RUNTIME_SETTINGS_UPDATED_EVENT = 'tripstar:runtime-settings-updated'
+
+// ============ 用户认证存储 ============
+export const AUTH_ACCESS_TOKEN_STORAGE_KEY = 'tripstar.auth.access_token'
+export const AUTH_REFRESH_TOKEN_STORAGE_KEY = 'tripstar.auth.refresh_token'
+export const AUTH_EXPIRED_EVENT = 'tripstar:auth-expired'
+const AUTH_EXEMPT_URLS = ['/api/auth/login', '/api/auth/register', '/api/auth/refresh', '/api/auth/logout']
+
+export const getAccessToken = (): string => {
+  if (typeof window === 'undefined') return ''
+  return normalizeText(window.localStorage.getItem(AUTH_ACCESS_TOKEN_STORAGE_KEY))
+}
+
+export const getRefreshToken = (): string => {
+  if (typeof window === 'undefined') return ''
+  return normalizeText(window.localStorage.getItem(AUTH_REFRESH_TOKEN_STORAGE_KEY))
+}
+
+export const setAuthTokens = (accessToken: string, refreshToken: string): void => {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(AUTH_ACCESS_TOKEN_STORAGE_KEY, accessToken)
+  window.localStorage.setItem(AUTH_REFRESH_TOKEN_STORAGE_KEY, refreshToken)
+}
+
+export const clearAuthTokens = (): void => {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(AUTH_ACCESS_TOKEN_STORAGE_KEY)
+  window.localStorage.removeItem(AUTH_REFRESH_TOKEN_STORAGE_KEY)
+}
+
+/** 触发认证失效事件（auth service 监听后清空用户态并跳转登录页） */
+const emitAuthExpired = (): void => {
+  if (typeof window === 'undefined') return
+  clearAuthTokens()
+  window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT))
+}
+
+/** 用 refresh token 换取新的双 token（用裸 axios，避免拦截器递归） */
+let refreshPromise: Promise<boolean> | null = null
+const refreshAuthTokens = async (): Promise<boolean> => {
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) return false
+
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post(`${getRuntimeApiBaseUrl()}/api/auth/refresh`, { refresh_token: refreshToken }, {
+        headers: { 'Content-Type': 'application/json' },
+      })
+      .then((response) => {
+        const data = response.data?.data
+        if (data?.access_token && data?.refresh_token) {
+          setAuthTokens(data.access_token, data.refresh_token)
+          return true
+        }
+        return false
+      })
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
 const t = i18n.global.t
 
 const normalizeBaseUrl = (value: string | null | undefined): string => {
@@ -158,6 +221,11 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     config.baseURL = getRuntimeApiBaseUrl()
+    // 注入认证令牌
+    const token = getAccessToken()
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
     console.log('发送请求:', config.method?.toUpperCase(), config.url)
     return config
   },
@@ -167,14 +235,31 @@ apiClient.interceptors.request.use(
   }
 )
 
-// 响应拦截器
+// 响应拦截器：401 时自动刷新令牌并重放请求
 apiClient.interceptors.response.use(
   (response) => {
     console.log('收到响应:', response.status, response.config.url)
     return response
   },
-  (error) => {
-    console.error('响应错误:', error.response?.status, error.message)
+  async (error) => {
+    const original = error.config
+    const status = error.response?.status
+    const requestPath = String(original?.url || '')
+
+    if (status === 401 && original && !original._retried && !AUTH_EXEMPT_URLS.some((u) => requestPath.includes(u))) {
+      original._retried = true
+      const refreshed = await refreshAuthTokens()
+      if (refreshed) {
+        const token = getAccessToken()
+        if (token && original.headers) {
+          original.headers.Authorization = `Bearer ${token}`
+        }
+        return apiClient(original)
+      }
+      emitAuthExpired()
+    }
+
+    console.error('响应错误:', status, error.message)
     return Promise.reject(error)
   }
 )
@@ -255,6 +340,44 @@ export async function saveRuntimeSettings(settings: RuntimeSettings): Promise<Ru
 }
 
 /**
+ * ============ 小红书扫码登录 ============
+ */
+export interface XhsQrLoginStatus {
+  status: 'idle' | 'pending' | 'success' | 'failed' | 'timeout'
+  message: string
+  qrcode_base64: string
+}
+
+export async function startXhsQrLogin(): Promise<void> {
+  try {
+    await apiClient.post('/api/settings/xhs/login/start')
+  } catch (error: any) {
+    console.error('启动小红书扫码登录失败:', error)
+    throw new Error(error.response?.data?.detail || error.message || t('settings.xhsQr.startFailed'))
+  }
+}
+
+export async function getXhsQrLoginStatus(): Promise<XhsQrLoginStatus> {
+  try {
+    const response = await apiClient.get<{ data?: XhsQrLoginStatus }>('/api/settings/xhs/login/status')
+    return (
+      response.data?.data || { status: 'idle', message: '', qrcode_base64: '' }
+    )
+  } catch (error: any) {
+    console.error('查询扫码状态失败:', error)
+    throw new Error(error.response?.data?.detail || error.message || t('settings.xhsQr.startFailed'))
+  }
+}
+
+export async function cancelXhsQrLogin(): Promise<void> {
+  try {
+    await apiClient.post('/api/settings/xhs/login/cancel')
+  } catch {
+    // 取消失败不影响主流程
+  }
+}
+
+/**
  * 提交旅行规划任务（立即返回 task_id）
  */
 export async function submitTripPlan(formData: TripFormData): Promise<SubmitTripPlanResponse> {
@@ -302,13 +425,16 @@ export async function generateTripPlan(
   const task = await submitTripPlan(formData)
   options?.onTaskCreated?.(task)
 
+  // WebSocket 无法携带 Authorization 头，改用 query 参数传递令牌
+  const accessToken = getAccessToken()
   const wsUrl = task.ws_url.startsWith('ws://') || task.ws_url.startsWith('wss://')
     ? task.ws_url
     : `${getWsBaseUrl()}${task.ws_url}`
+  const wsUrlWithToken = accessToken ? `${wsUrl}${wsUrl.includes('?') ? '&' : '?'}token=${encodeURIComponent(accessToken)}` : wsUrl
 
   return new Promise((resolve, reject) => {
     let settled = false
-    const socket = new WebSocket(wsUrl)
+    const socket = new WebSocket(wsUrlWithToken)
 
     const safeResolve = (value: TripPlanResponse) => {
       if (settled) return

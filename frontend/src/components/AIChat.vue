@@ -12,35 +12,52 @@
               <span class="ball cyan"></span>
             </div>
           </div>
-          <div class="content-card" :class="{ clickable: !chatOpen }" @click="openChatPanel">
+          <div
+            class="content-card"
+            :class="{ clickable: !chatOpen }"
+            ref="launcherRef"
+            @click="openChatPanel"
+            @pointermove="handleLauncherPointerMove"
+            @pointerleave="resetLauncherTilt"
+          >
             <div class="background-blur-card">
-              <div class="eyes">
-                <span class="eye"></span>
-                <span class="eye"></span>
-              </div>
-              <div class="eyes happy">
-                <svg fill="none" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M8.28386 16.2843C8.9917 15.7665 9.8765 14.731 12 14.731C14.1235 14.731 15.0083 15.7665 15.7161 16.2843C17.8397 17.8376 18.7542 16.4845 18.9014 15.7665C19.4323 13.1777 17.6627 11.1066 17.3088 10.5888C16.3844 9.23666 14.1235 8 12 8C9.87648 8 7.61556 9.23666 6.69122 10.5888C6.33728 11.1066 4.56771 13.1777 5.09858 15.7665C5.24582 16.4845 6.16034 17.8376 8.28386 16.2843Z"
-                  ></path>
-                </svg>
-                <svg fill="none" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M8.28386 16.2843C8.9917 15.7665 9.8765 14.731 12 14.731C14.1235 14.731 15.0083 15.7665 15.7161 16.2843C17.8397 17.8376 18.7542 16.4845 18.9014 15.7665C19.4323 13.1777 17.6627 11.1066 17.3088 10.5888C16.3844 9.23666 14.1235 8 12 8C9.87648 8 7.61556 9.23666 6.69122 10.5888C6.33728 11.1066 4.56771 13.1777 5.09858 15.7665C5.24582 16.4845 6.16034 17.8376 8.28386 16.2843Z"
-                  ></path>
-                </svg>
+              <div class="launcher-mark">
+                <span class="launcher-star" aria-hidden="true">
+                  <span class="launcher-star-roll">
+                    <span class="launcher-star-face">
+                      <span class="launcher-star-flow"></span>
+                      <span class="launcher-star-spec"></span>
+                    </span>
+                  </span>
+                </span>
+                <span class="launcher-pulse" aria-hidden="true"></span>
               </div>
             </div>
           </div>
+          <div
+            class="launcher-hint"
+            :class="{ visible: launcherHintVisible }"
+            role="button"
+            tabindex="0"
+            @click.stop="openChatPanel"
+            @keydown.enter.prevent="openChatPanel"
+            @keydown.space.prevent="openChatPanel"
+          >
+            <span class="launcher-hint-tail" aria-hidden="true"></span>
+            <span class="launcher-hint-dot" aria-hidden="true"></span>
+            <span class="launcher-hint-text">{{ t(launcherHintKey) }}</span>
+          </div>
           <div class="container-ai-chat" @click.stop>
-            <button type="button" class="chat-close-btn btn-round btn-danger" @click.stop="closeChatPanel">×</button>
             <div class="chat">
+              <div class="chat-head">
+                <span class="chat-head-mark" aria-hidden="true"></span>
+                <span class="chat-head-title">{{ t('result.chat.title') }}</span>
+                <button type="button" class="chat-close-btn" @click.stop="closeChatPanel">×</button>
+              </div>
               <div class="chat-bot">
                 <div class="chat-history" ref="chatMessagesRef">
                   <div v-if="chatHistory.length === 0" class="chat-empty">
-                    <p>{{ t('result.chat.welcome') }}</p>
+                    <p class="chat-empty-lead">{{ t('result.chat.welcome') }}</p>
                     <div class="chat-suggestions">
                       <button
                         v-for="question in quickQuestions"
@@ -50,7 +67,8 @@
                         :disabled="chatLoading || !tripPlan"
                         @click="sendQuickQuestion(t(question.questionKey))"
                       >
-                        {{ t(question.labelKey) }}
+                        <span class="chat-suggestion-text">{{ t(question.labelKey) }}</span>
+                        <span class="chat-suggestion-arrow" aria-hidden="true">→</span>
                       </button>
                     </div>
                   </div>
@@ -152,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import type { ChatMessage, TripPlan } from '@/types'
@@ -168,6 +186,98 @@ const chatInput = ref('')
 const chatHistory = ref<ChatMessage[]>([])
 const chatLoading = ref(false)
 const chatMessagesRef = ref<HTMLElement | null>(null)
+
+// ===== 启动器互动 =====
+const launcherRef = ref<HTMLElement | null>(null)
+const launcherHintVisible = ref(false)
+/** 气泡文案保存成 i18n key，切换语言时可即时更新 */
+const launcherHintKey = ref('result.chat.greetEvening')
+let hintShowTimer: number | null = null
+let hintHideTimer: number | null = null
+
+/** 首次提示延时 / 气泡停留时长 / 两轮提示之间的间隔（毫秒） */
+const HINT_FIRST_DELAY = 1500
+const HINT_VISIBLE_MS = 7000
+const HINT_REPEAT_INTERVAL = 45000
+/** 关闭面板后重新开始问候的间隔 */
+const HINT_RESUME_DELAY = 8000
+
+/** 按当前时间挑选问候语（早/中/下午/晚） */
+const pickGreetingKey = () => {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 11) return 'result.chat.greetMorning'
+  if (hour >= 11 && hour < 14) return 'result.chat.greetNoon'
+  if (hour >= 14 && hour < 18) return 'result.chat.greetAfternoon'
+  return 'result.chat.greetEvening'
+}
+
+/** 机器人跟随光标：把指针在启动器内的相对位置换算成 -1~1，再写成 CSS 变量驱动倾斜 */
+const handleLauncherPointerMove = (event: PointerEvent) => {
+  const el = launcherRef.value
+  if (!el || chatOpen.value) return
+  const rect = el.getBoundingClientRect()
+  if (!rect.width || !rect.height) return
+  const nx = Math.max(-1, Math.min(1, ((event.clientX - rect.left) / rect.width - 0.5) * 2))
+  const ny = Math.max(-1, Math.min(1, ((event.clientY - rect.top) / rect.height - 0.5) * 2))
+  el.style.setProperty('--bot-ry', `${(nx * 13).toFixed(2)}deg`)
+  el.style.setProperty('--bot-rx', `${(-ny * 9).toFixed(2)}deg`)
+  el.style.setProperty('--bot-tx', `${(nx * 7).toFixed(2)}px`)
+  el.style.setProperty('--bot-ty', `${(ny * 7).toFixed(2)}px`)
+}
+
+/** 指针离开后回到正位 */
+const resetLauncherTilt = () => {
+  const el = launcherRef.value
+  if (!el) return
+  el.style.setProperty('--bot-ry', '0deg')
+  el.style.setProperty('--bot-rx', '0deg')
+  el.style.setProperty('--bot-tx', '0px')
+  el.style.setProperty('--bot-ty', '0px')
+}
+
+const clearLauncherHintTimers = () => {
+  if (hintShowTimer !== null) {
+    window.clearTimeout(hintShowTimer)
+    hintShowTimer = null
+  }
+  if (hintHideTimer !== null) {
+    window.clearTimeout(hintHideTimer)
+    hintHideTimer = null
+  }
+}
+
+/** 展示一次问候气泡：每次按当下时间刷新文案，停留数秒后收起并安排下一轮 */
+const showLauncherHint = () => {
+  if (chatOpen.value) return
+  launcherHintKey.value = pickGreetingKey()
+  launcherHintVisible.value = true
+  hintHideTimer = window.setTimeout(() => {
+    hintHideTimer = null
+    launcherHintVisible.value = false
+    scheduleLauncherHint(HINT_REPEAT_INTERVAL)
+  }, HINT_VISIBLE_MS)
+}
+
+/** 延时若干毫秒后再展示一次气泡 */
+const scheduleLauncherHint = (delay: number) => {
+  clearLauncherHintTimers()
+  hintShowTimer = window.setTimeout(() => {
+    hintShowTimer = null
+    showLauncherHint()
+  }, delay)
+}
+
+/** 收起气泡并停止提示循环（打开面板、组件卸载时调用） */
+const dismissLauncherHint = () => {
+  clearLauncherHintTimers()
+  launcherHintVisible.value = false
+}
+
+onMounted(() => {
+  scheduleLauncherHint(HINT_FIRST_DELAY)
+})
+
+onBeforeUnmount(clearLauncherHintTimers)
 
 const quickQuestions = [
   {
@@ -198,7 +308,14 @@ const scrollChatToBottom = () => {
 }
 
 watch(chatOpen, (open) => {
-  if (open) scrollChatToBottom()
+  if (open) {
+    scrollChatToBottom()
+    dismissLauncherHint()
+    resetLauncherTilt()
+  } else {
+    // 关闭面板后隔一会儿继续问候
+    scheduleLauncherHint(HINT_RESUME_DELAY)
+  }
 })
 
 const openChatPanel = () => {
@@ -254,7 +371,10 @@ const sendChatMessage = async () => {
   left: 8px;
   bottom: 8px;
   z-index: 1000;
-  transform: scale(0.3);
+  /* 面板与气泡底色：比纯白更暗、更中性的纸面，降低大面积白底的亮度与暖调 */
+  --ai-chat-surface: #f4f3f0;
+  /* 组件按 1260×1100 的画布设计，这里统一缩放；调大数值即可整体放大机器人、气泡与面板 */
+  transform: scale(0.36);
 }
 
 .container-ai-input {
@@ -283,10 +403,13 @@ const sendChatMessage = async () => {
 
 .container-wrap:hover {
   padding: 0;
+  /* 悬停时机器人轻微放大（变量由内层 transform 消费） */
+  --bot-scale: 1.06;
 }
 
-.container-wrap:active {
-  transform: scale(0.95);
+/* 点击反馈：按下时轻微压扁，展开面板时不参与 */
+.container-wrap:not(.open):active {
+  transform: scale(0.94, 1.06);
 }
 
 .container-wrap:after {
@@ -294,21 +417,18 @@ const sendChatMessage = async () => {
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translateX(-50%) translateY(-55%);
-  width: 12rem;
-  height: 11rem;
-  background-color: #dedfe0;
-  border-radius: 2rem;
-  transition: all 0.3s ease;
-}
-
-.container-wrap:hover:after {
   transform: translateX(-50%) translateY(-50%);
-  height: 10rem;
+  width: 12rem;
+  height: 12rem;
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  transition: all 0.3s var(--ts-ease);
 }
 
-.container-wrap.open .eyes {
+.container-wrap.open .launcher-mark {
   opacity: 0;
+  pointer-events: none;
 }
 
 .container-wrap.open .content-card {
@@ -317,7 +437,22 @@ const sendChatMessage = async () => {
 }
 
 .container-wrap.open .background-blur-balls {
-  border-radius: 24px;
+  border-radius: 0;
+}
+
+/* 面板展开时收起启动器光晕，避免在面板外圈留下暖色残影 */
+.container-wrap.open .balls {
+  opacity: 0;
+}
+
+/* 展开面板时恢复纸色底，避免启动器光晕从面板边缘漏出 */
+.container-wrap.open:after,
+.container-wrap.open .background-blur-balls {
+  background-color: var(--ai-chat-surface);
+}
+
+.container-wrap.open .content-card::after {
+  opacity: 0;
 }
 
 .container-wrap.open .container-ai-chat {
@@ -330,24 +465,31 @@ const sendChatMessage = async () => {
 .card {
   width: 100%;
   height: 100%;
-  /* background-color: #fff; */
   position: relative;
   transform-style: preserve-3d;
   will-change: transform;
-  transition: all 0.6s ease;
-  border-radius: 3rem;
+  transition: all 0.6s var(--ts-ease);
+  border-radius: 0;
   display: flex;
   align-items: flex-end;
   transform: translateZ(50px);
   justify-content: flex-start;
+  /* Paper Kit 主题的 .card 自带白底和投影，会在机器人身后留下一个白色方块，这里显式清掉。
+     启动器的暖色光晕由 .background-blur-balls 负责，展开时的纸色底也由它承担 */
+  background-color: transparent;
+  box-shadow: none;
 }
 
 .card:hover {
-  box-shadow:
-    0 10px 40px rgba(0, 0, 60, 0.25),
-    inset 0 0 10px rgba(255, 255, 255, 0.5);
+  box-shadow: none;
 }
 
+/* 主题的 .card:hover 会把卡片下移 10px，在启动器上表现为机器人往下跳一下，这里复位 */
+.card:not(.card-plain):hover {
+  transform: translateZ(50px);
+}
+
+/* 只保留一层暖色光晕垫在机器人身后，不再有实心底板 */
 .background-blur-balls {
   position: absolute;
   left: 0;
@@ -355,21 +497,14 @@ const sendChatMessage = async () => {
   width: 100%;
   height: 100%;
   z-index: -10;
-  border-radius: 3rem;
-  transition: all 0.3s ease;
-  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 0;
+  transition: all 0.3s var(--ts-ease);
+  background-color: transparent;
   overflow: hidden;
 }
+/* 原来的四团暖色光晕会在启动器身后围出一圈方形光斑，已停用 */
 .balls {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translateX(-50%) translateY(-50%);
-  animation: rotate-background-balls 10s linear infinite;
-}
-
-.container-wrap:hover .balls {
-  animation-play-state: paused;
+  display: none;
 }
 
 .background-blur-balls .ball {
@@ -378,43 +513,48 @@ const sendChatMessage = async () => {
   position: absolute;
   border-radius: 50%;
   filter: blur(30px);
+  opacity: 0.14;
 }
 
 .background-blur-balls .ball.violet {
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #9147ff;
+  background-color: var(--ts-accent);
 }
 
 .background-blur-balls .ball.green {
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #34d399;
+  background-color: var(--ts-accent-deep);
 }
 
 .background-blur-balls .ball.rosa {
   top: 50%;
   left: 0;
   transform: translateY(-50%);
-  background-color: #ec4899;
+  background-color: var(--ts-accent);
 }
 
 .background-blur-balls .ball.cyan {
   top: 50%;
   right: 0;
   transform: translateY(-50%);
-  background-color: #05e0f5;
+  background-color: var(--ts-accent-deep);
 }
 
 .content-card {
+  position: relative;
   width: 12rem;
   height: 12rem;
   display: flex;
-  border-radius: 3rem;
-  transition: all 0.3s ease;
-  overflow: hidden;
+  border-radius: 0;
+  transition: all 0.3s var(--ts-ease);
+  /* 允许机器人光圈与投影溢出，避免被裁切 */
+  overflow: visible;
+  /* 入场：从下方弹入并轻微回弹 */
+  animation: robot-enter 0.9s var(--ts-ease) both;
 }
 
 .content-card.clickable {
@@ -424,84 +564,324 @@ const sendChatMessage = async () => {
 .background-blur-card {
   width: 100%;
   height: 100%;
-  backdrop-filter: blur(50px);
+  background: transparent;
+  backdrop-filter: none;
 }
 
-.eyes {
+/* 启动器：彩色四角星（呼吸浮动 + 悬停跟随光标倾斜） */
+.launcher-mark {
   position: absolute;
   left: 50%;
-  bottom: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  width: 160px;
+  height: 160px;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 52px;
-  gap: 2rem;
-  transition: all 0.3s ease;
+  pointer-events: none;
+  animation: robot-float 4.2s ease-in-out infinite;
+  transition: opacity 0.3s var(--ts-ease);
+  /* 给内层的倾斜变换一个景深，让跟随光标的转动有立体感 */
+  perspective: 520px;
+}
 
-  & .eye {
-    width: 26px;
-    height: 52px;
-    background-color: #fff;
-    border-radius: 16px;
-    animation: animate-eyes 10s infinite linear;
-    transition: all 0.3s ease;
+/* 光标跟随的载体：位移 + 倾斜 + 悬停放大，全部由 CSS 变量拼装。
+   缓动用长尾缓出，指针移动时是「滑」过去而不是「跳」过去 */
+.launcher-star {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: translate3d(var(--bot-tx, 0px), var(--bot-ty, 0px), 0)
+    rotateX(var(--bot-rx, 0deg)) rotateY(var(--bot-ry, 0deg)) scale(var(--bot-scale, 1));
+  transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s var(--ts-ease);
+  will-change: transform;
+  /* 立体投影：filter 落在遮罩之外，投影跟着星形轮廓走。
+     只留一层很轻的接触阴影，避免星星底下糊出一块暗斑 */
+  filter: drop-shadow(0 5px 12px rgba(24, 20, 16, 0.16));
+}
+
+/* 星形遮罩：内部所有图层都会被裁成四角星 */
+.launcher-star-face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  /* 四角星路径遮罩定义在使用它的同一条规则里：变量一旦丢失，mask 会整条失效退化成方块 */
+  --star-mask: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 0C12 6.6 17.4 12 24 12C17.4 12 12 17.4 12 24C12 17.4 6.6 12 0 12C6.6 12 12 6.6 12 0Z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask: var(--star-mask) center / contain no-repeat;
+  mask: var(--star-mask) center / contain no-repeat;
+  animation: robot-breathe 5.6s ease-in-out infinite;
+}
+
+/* ① 彩色本体：锥形渐变缓慢旋转，颜色在星形内流动 */
+.launcher-star-flow {
+  position: absolute;
+  inset: -30%;
+  display: block;
+  background: conic-gradient(
+    from 0deg,
+    #ff3d5a 0deg,
+    #ff8a4a 36deg,
+    #c86bff 64deg,
+    #4a8cff 96deg,
+    #34d1c4 138deg,
+    #3ed98b 180deg,
+    #a8d94a 224deg,
+    #ffc247 272deg,
+    #ff7a5c 324deg,
+    #ff3d5a 360deg
+  );
+  animation: star-flow 18s linear infinite;
+}
+
+/* ② 高光面：左上受光，叠加出釉面质感 */
+.launcher-star-spec {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: radial-gradient(
+    circle at 34% 26%,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.3) 32%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  mix-blend-mode: screen;
+}
+
+/* ④ 悬停滚动：整体绕 Z 轴滚 90°。
+   独立成层，用对称缓动做出「滚」的手感，与上层的「跟随光标」缓动互不干扰 */
+.launcher-star-roll {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform: rotate(var(--star-roll, 0deg));
+  transition: transform 0.62s cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: transform;
+}
+
+.container-wrap:hover .launcher-star-roll {
+  --star-roll: 90deg;
+}
+
+@keyframes star-flow {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-.eyes.happy {
-  display: none;
-  color: #fff;
-  gap: 0;
+/* 右下角强调色呼吸点，暗示「可以问我」 */
+.launcher-pulse {
+  position: absolute;
+  right: 34px;
+  bottom: 34px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--ts-accent);
+  box-shadow: 0 0 0 4px var(--ts-card);
+  animation: robot-pulse 2.4s ease-in-out infinite;
+}
 
-  & svg {
-    width: 60px;
+.container-wrap:hover .launcher-star {
+  filter: drop-shadow(0 7px 16px rgba(24, 20, 16, 0.2))
+    drop-shadow(0 0 22px rgba(255, 170, 90, 0.42));
+}
+
+.container-wrap:hover .launcher-pulse {
+  background-color: var(--ts-accent-deep);
+  animation-duration: 1.4s;
+}
+
+/* 启动器右侧的问候气泡：定时出现、自动收起、点击即可对话 */
+.launcher-hint {
+  position: absolute;
+  left: calc(100% + 20px);
+  bottom: 72px;
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 32px;
+  background: var(--ai-chat-surface);
+  border: 1px solid var(--ts-rule-strong);
+  color: var(--ts-ink);
+  font-family: var(--ts-font-sans);
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-14px) scale(0.94);
+  transform-origin: left bottom;
+  transition: opacity 0.45s var(--ts-ease), transform 0.45s var(--ts-ease),
+    border-color 0.25s var(--ts-ease), color 0.25s var(--ts-ease);
+}
+
+.launcher-hint.visible {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.launcher-hint.visible:hover {
+  border-color: var(--ts-accent);
+  color: var(--ts-accent);
+}
+
+/* 指向机器人的气泡尖角 */
+.launcher-hint-tail {
+  position: absolute;
+  left: -13px;
+  bottom: 22px;
+  width: 26px;
+  height: 26px;
+  background: var(--ai-chat-surface);
+  border-left: 1px solid var(--ts-rule-strong);
+  border-bottom: 1px solid var(--ts-rule-strong);
+  transform: rotate(45deg);
+  transition: border-color 0.25s var(--ts-ease);
+}
+
+.launcher-hint.visible:hover .launcher-hint-tail {
+  border-left-color: var(--ts-accent);
+  border-bottom-color: var(--ts-accent);
+}
+
+.launcher-hint-text {
+  min-width: 0;
+}
+
+.launcher-hint-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ts-accent);
+  flex: none;
+  animation: robot-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes robot-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(34px) scale(0.55);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(-8px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
-.container-wrap:hover .eyes .eye {
-  display: none;
+@keyframes robot-float {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) translateY(0);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(-10px);
+  }
 }
 
-.container-wrap:hover .eyes.happy {
-  display: flex;
+@keyframes robot-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.022);
+  }
+}
+
+@keyframes robot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.72);
+    opacity: 0.55;
+  }
 }
 
 .container-ai-chat {
   position: absolute;
   width: 100%;
   height: 100%;
-  padding: 36px;
+  padding: 32px;
   opacity: 0;
   pointer-events: none;
 }
 
+/* 面板页眉：栏目名 + 关闭，像刊物页眉一样把整块内容框住 */
+.chat-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 26px 26px 20px;
+  border-bottom: 1px solid var(--ts-rule);
+}
+
+.chat-head-mark {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  background: conic-gradient(from 0deg, #ff3d5a, #ffc247, #3ed98b, #4a8cff, #ff3d5a);
+  /* 同一份四角星路径，页眉标记与启动器共用形状 */
+  --star-mask: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 0C12 6.6 17.4 12 24 12C17.4 12 12 17.4 12 24C12 17.4 6.6 12 0 12C6.6 12 12 6.6 12 0Z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask: var(--star-mask) center / contain no-repeat;
+  mask: var(--star-mask) center / contain no-repeat;
+}
+
+.chat-head-title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--ts-font-serif);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ts-ink);
+}
+
 .container-ai-chat .chat-close-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 3;
-  width: 62px;
-  height: 62px;
+  position: static;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
   border: none;
-  border-radius: 50%;
-//   background: rgba(0, 0, 0, 0.12);
-//   color: rgba(255, 255, 255, 0.92);
-  font-size: 50px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ts-ink-3);
+  font-size: 44px;
   line-height: 1;
   cursor: pointer;
+  transition: color 0.25s var(--ts-ease);
+}
+
+.container-ai-chat .chat-close-btn:hover {
+  color: var(--ts-accent);
 }
 
 .container-wrap .card .chat {
   display: flex;
-  justify-content: space-between;
   flex-direction: column;
-  border-radius: 15px;
+  border-radius: 0;
+  border: 1px solid var(--ts-rule);
   width: 100%;
   height: 100%;
-  padding: 90px 20px 20px;
+  padding: 0;
   overflow: hidden;
-  background-color: #ffffff;
+  background-color: var(--ai-chat-surface);
 }
 
 .container-wrap .card .chat .chat-bot {
@@ -509,7 +889,9 @@ const sendChatMessage = async () => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: 18px 26px 0;
   transition: all 0.3s ease;
 }
 
@@ -517,84 +899,121 @@ const sendChatMessage = async () => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  border-radius: 12px;
-  padding: 26px 26px;
+  border-radius: 0;
+  padding: 12px 2px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.03);
+  gap: 18px;
+  background: transparent;
 
   &::-webkit-scrollbar {
-    width: 12px;
+    width: 8px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #dedfe0;
-    border-radius: 5px;
+    background: var(--ts-rule-strong);
+    border-radius: 0;
   }
 }
 
 .card .chat .chat-bot .chat-empty {
-  color: #8b8b8b;
-  line-height: 1.5;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 30px;
+  padding-bottom: 20px;
+  color: var(--ts-ink-2);
+}
 
-  p {
-    margin: 0;
-    font-size: 48px;
-    font-weight: 600;
-  }
+/* 欢迎语：正文无衬线 + 高对比墨色，缩小后依旧清晰 */
+.card .chat .chat-bot .chat-empty-lead {
+  margin: 0;
+  font-family: var(--ts-font-sans);
+  font-size: 52px;
+  font-weight: 600;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+  color: var(--ts-ink);
 }
 
 .card .chat .chat-bot .chat-suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 16px;
+  width: 100%;
 }
 
+/* 快捷问题：浅色药丸标签 + 深朱砂文字，悬停才填色，避免整块重色压住画面 */
 .card .chat .chat-bot .chat-suggestion {
-  border: none;
-  border-radius: 20px;
-  padding: 12px 24px;
-  font-size: 42px;
-  font-weight: 500;
-  background-color: #f5593d;
-  border-color: #f5593d;
-  color: #ffffff;
-  opacity: 1;
-  filter: alpha(opacity=100);
-//   background: linear-gradient(135deg, #ff4141, #9147ff, #3b82f6);
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--ts-accent-line);
+  border-radius: 0;
+  padding: 20px 34px;
+  font-family: var(--ts-font-sans);
+  font-size: 46px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  background-color: var(--ts-accent-soft);
+  color: var(--ts-accent-deep);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.25s var(--ts-ease), border-color 0.25s var(--ts-ease),
+    color 0.25s var(--ts-ease);
+}
+
+.card .chat .chat-bot .chat-suggestion-arrow {
+  font-size: 40px;
+  line-height: 1;
+  color: var(--ts-accent-deep);
+  transition: transform 0.25s var(--ts-ease), color 0.25s var(--ts-ease);
+}
+
+.card .chat .chat-bot .chat-suggestion:hover {
+  background-color: var(--ts-accent);
+  border-color: var(--ts-accent);
+  color: var(--ts-paper);
+}
+
+.card .chat .chat-bot .chat-suggestion:hover .chat-suggestion-arrow {
+  color: var(--ts-paper);
+  transform: translateX(5px);
 }
 
 .card .chat .chat-bot .chat-suggestion:disabled {
-  opacity: 0.35;
+  opacity: 0.45;
   cursor: not-allowed;
+}
+
+.card .chat .chat-bot .chat-suggestion:disabled .chat-suggestion-arrow {
+  color: var(--ts-ink-4);
 }
 
 .card .chat .chat-bot .chat-msg {
   max-width: 92%;
   font-size: 44px;
   font-weight: 500;
-  line-height: 1.6;
-  border-radius: 24px;
-  padding: 16px 24px;
-  color: #2c2c2c;
-  background: #f3f6fd;
+  line-height: 1.65;
+  border-radius: 0;
+  border-left: 2px solid var(--ts-rule-strong);
+  padding: 8px 20px;
+  color: var(--ts-ink-2);
+  background: transparent;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .card .chat .chat-bot .chat-msg.user {
   margin-left: auto;
-  background-color: #f5593d;
-  border-color: #f5593d;
-  color: #ffffff;
+  background-color: transparent;
+  border-left: 2px solid var(--ts-accent);
+  color: var(--ts-ink);
+  font-weight: 600;
   opacity: 1;
   filter: alpha(opacity=100);
-
-//   background: linear-gradient(135deg, #ff4141, #9147ff);
 }
 
 .card .chat .chat-bot .chat-msg.assistant {
@@ -611,11 +1030,10 @@ const sendChatMessage = async () => {
 .card .chat .chat-bot .chat-msg.typing .dot {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
-//   background: #9147ff;
-  background-color: #f5593d;
-  border-color: #f5593d;
-  color: #ffffff;
+  border-radius: 0;
+  background-color: var(--ts-accent);
+  border-color: var(--ts-accent);
+  color: var(--ts-paper);
   opacity: 1;
   filter: alpha(opacity=100);
   animation: aiChatDotPulse 1.4s infinite ease-in-out both;
@@ -631,18 +1049,20 @@ const sendChatMessage = async () => {
 
 .card .chat .chat-bot textarea {
   background-color: transparent;
-  border-radius: 16px;
+  border-radius: 0;
   border: none;
+  border-bottom: 1px solid var(--ts-rule-strong);
   width: 100%;
   min-height: 156px;
   max-height: 178px;
-  color: #4a4a4a;
-  font-family: sans-serif;
+  color: var(--ts-ink);
+  font-family: var(--ts-font-sans);
   font-size: 48px;
   font-weight: 500;
-  padding: 10px;
+  padding: 10px 0;
   resize: none;
   outline: none;
+  transition: border-color 0.25s var(--ts-ease);
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -654,21 +1074,24 @@ const sendChatMessage = async () => {
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #dedfe0;
-    border-radius: 5px;
+    background: var(--ts-rule-strong);
+    border-radius: 0;
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    background: #8b8b8b;
+    background: var(--ts-ink-4);
     cursor: pointer;
   }
 
   &::placeholder {
-    color: #dedfe0;
-    transition: all 0.3s ease;
+    color: var(--ts-ink-3);
+    transition: color 0.3s var(--ts-ease);
+  }
+  &:focus {
+    border-bottom-color: var(--ts-accent);
   }
   &:focus::placeholder {
-    color: #8b8b8b;
+    color: var(--ts-ink-2);
   }
 }
 
@@ -676,7 +1099,7 @@ const sendChatMessage = async () => {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding: 20px;
+  padding: 18px 26px 22px;
 
   & button {
     transition: all 0.3s ease;
@@ -689,15 +1112,20 @@ const sendChatMessage = async () => {
 
   & button {
     display: flex;
-    color: rgba(0, 0, 0, 0.1);
+    color: var(--ts-ink-3);
     background-color: transparent;
     border: none;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: color 0.25s var(--ts-ease);
+
+    & svg {
+      width: 32px;
+      height: 32px;
+    }
 
     &:hover {
-      transform: translateY(-10px);
-      color: #8b8b8b;
+      transform: none;
+      color: var(--ts-accent);
     }
   }
 }
@@ -705,55 +1133,61 @@ const sendChatMessage = async () => {
 .card .chat .options .btn-submit {
   display: flex;
   padding: 15px;
-  background-color: #f5593d;
-  border-color: #f5593d;
-  color: #ffffff;
+  background-color: var(--ts-accent);
+  border-color: var(--ts-accent);
+  color: var(--ts-paper);
   opacity: 1;
   filter: alpha(opacity=100);
-//   background-image: linear-gradient(to top, #ff4141, #9147ff, #3b82f6);
-  border-radius: 10px;
-  box-shadow: inset 0 6px 2px -4px rgba(255, 255, 255, 0.5);
+  border-radius: 0;
+  box-shadow: none;
   cursor: pointer;
   border: none;
   outline: none;
-  opacity: 0.7;
-//   transform: translateY(-100%);
-  transition: all 0.15s ease;
+  opacity: 0.85;
+  transition: background 0.15s var(--ts-ease), opacity 0.15s var(--ts-ease);
 
   & i {
     width: 60px;
     height: 60px;
     padding: 6px;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
-    backdrop-filter: blur(3px);
-    color: #cfcfcf;
+    background: transparent;
+    border-radius: 0;
+    backdrop-filter: none;
+    color: var(--ts-paper);
   }
   & svg {
-    transition: all 0.3s ease;
+    transition: color 0.3s var(--ts-ease);
   }
   &:hover {
     opacity: 1;
+    background-color: var(--ts-accent-deep);
     & svg {
-      color: #f3f6fd;
-      filter: drop-shadow(0 0 5px #ffffff);
+      color: var(--ts-paper);
+      filter: none;
     }
   }
 
   &:focus svg {
-    color: #f3f6fd;
-    filter: drop-shadow(0 0 5px #ffffff);
-    transform: scale(1.2) rotate(45deg) translateX(-2px) translateY(1px);
+    color: var(--ts-paper);
+    filter: none;
+    transform: none;
   }
 
   &:active {
-    transform: scale(0.92);
+    transform: none;
+    opacity: 0.9;
   }
 }
 
+/* 禁用态：不靠整体透明，改成描边空心，避免变成一块发灰的粉块 */
 .card .chat .options .btn-submit:disabled {
-  opacity: 0.35;
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--ts-rule-strong);
   cursor: not-allowed;
+
+  & i {
+    color: var(--ts-ink-4);
+  }
 }
 
 @keyframes aiChatDotPulse {
@@ -1109,27 +1543,6 @@ const sendChatMessage = async () => {
   }
 }
 
-@keyframes animate-eyes {
-  46% {
-    height: 52px;
-  }
-  48% {
-    height: 20px;
-  }
-  50% {
-    height: 52px;
-  }
-  96% {
-    height: 52px;
-  }
-  98% {
-    height: 20px;
-  }
-  100% {
-    height: 52px;
-  }
-}
-
 @media (max-width: 768px) {
   .ai-chat-floating {
     left: 12px;
@@ -1156,5 +1569,45 @@ const sendChatMessage = async () => {
     width: 6.5rem;
     height: 6.5rem;
   }
+
+  /* 小屏放宽：允许问候文案换行，避免气泡横向溢出 */
+  .launcher-hint {
+    left: calc(100% + 10px);
+    bottom: 46px;
+    gap: 10px;
+    max-width: 560px;
+    padding: 12px 22px;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+    white-space: normal;
+  }
+
+  .launcher-hint-tail {
+    left: -11px;
+    bottom: 18px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .launcher-hint-dot {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* ===== 编辑式杂志风覆盖：关闭随鼠标位置变化的 3D 倾斜，保持纸面平铺 ===== */
+.area:hover ~ .container-wrap .card {
+  transform: translateZ(50px) !important;
+}
+
+.area:hover ~ .container-wrap .eyes .eye {
+  transform: none !important;
+}
+
+.area:hover ~ .container-wrap .card .container-ai-chat .chat .options button,
+.area:hover ~ .container-wrap .card .container-ai-chat .chat .chat-bot {
+  transform: none !important;
 }
 </style>

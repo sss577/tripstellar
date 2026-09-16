@@ -373,11 +373,11 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-/* ===== 暗黑奢华主题 - 首页 ===== */
+/* ===== 奶油暖调主题 - 首页 ===== */
 
 .home-container {
   min-height: 100vh;
-  background: linear-gradient(160deg, #0a0a0f 0%, #12101f 30%, #1a1530 60%, #0f0d1a 100%);
+  background: linear-gradient(160deg, #FBF6EF 0%, #F7EDDF 45%, #F9F1E6 100%);
   padding: 60px 24px 80px;
   position: relative;
   overflow: hidden;
@@ -392,7 +392,7 @@ const handleSubmit = async () => {
 
 .star {
   position: absolute;
-  background: #fff;
+  background: #D9B48F;
   border-radius: 50%;
   opacity: 0;
   animation: twinkle linear infinite;
@@ -400,7 +400,7 @@ const handleSubmit = async () => {
 
 @keyframes twinkle {
   0%, 100% { opacity: 0; }
-  50% { opacity: 0.8; }
+  50% { opacity: 0.5; }
 }
 
 /* 渐变光晕 */
@@ -416,7 +416,7 @@ const handleSubmit = async () => {
   height: 500px;
   top: -150px;
   left: -100px;
-  background: rgba(255, 152, 0, 0.08);
+  background: rgba(196, 112, 63, 0.1);
 }
 
 .glow-2 {
@@ -424,7 +424,7 @@ const handleSubmit = async () => {
   height: 400px;
   top: 40%;
   right: -80px;
-  background: rgba(156, 39, 176, 0.06);
+  background: rgba(232, 168, 124, 0.12);
 }
 
 .glow-3 {
@@ -432,7 +432,7 @@ const handleSubmit = async () => {
   height: 350px;
   bottom: -80px;
   left: 30%;
-  background: rgba(0, 188, 212, 0.05);
+  background: rgba(180, 140, 100, 0.08);
 }
 
 /* 页面内容 */
@@ -454,11 +454,11 @@ const handleSubmit = async () => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 179, 71, 0.08);
-  border: 1px solid rgba(255, 179, 71, 0.2);
+  background: rgba(196, 112, 63, 0.08);
+  border: 1px solid rgba(196, 112, 63, 0.25);
   padding: 8px 20px;
   border-radius: 24px;
-  color: #FFD699;
+  color: #A65A2E;
   font-size: 13px;
   font-weight: 500;
   margin-bottom: 28px;
@@ -474,12 +474,12 @@ const handleSubmit = async () => {
   display: block;
   font-size: 52px;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.92);
+  color: #3E3229;
   letter-spacing: -0.02em;
 }
 
 .title-accent {
-  background: linear-gradient(135deg, #FFB347 0%, #FF6B6B 50%, #C084FC 100%);
+  background: linear-gradient(135deg, #C4703F 0%, #A65A2E 55%, #8A7B6C 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -487,22 +487,22 @@ const handleSubmit = async () => {
 
 .hero-desc {
   font-size: 17px;
-  color: rgba(255, 255, 255, 0.4);
+  color: #8A7B6C;
   margin: 0;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: 0.02em;
 }
 
-/* 玻璃拟态卡片 */
+/* 奶油玻璃卡片 */
 .glass-card {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid #EDE3D6;
   border-radius: 24px;
   padding: 48px;
   box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 24px 80px rgba(62, 50, 41, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   animation: fadeUp 0.8s ease-out 0.2s both;
 }
 
@@ -521,8 +521,8 @@ const handleSubmit = async () => {
 .step-num {
   font-size: 14px;
   font-weight: 700;
-  color: #FFB347;
-  background: rgba(255, 179, 71, 0.12);
+  color: #A65A2E;
+  background: rgba(196, 112, 63, 0.12);
   width: 36px;
   height: 36px;
   border-radius: 10px;
@@ -536,14 +536,14 @@ const handleSubmit = async () => {
 .step-label {
   font-size: 18px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: #3E3229;
   letter-spacing: 0.02em;
 }
 
 .step-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(255, 179, 71, 0.3) 0%, transparent 100%);
+  background: linear-gradient(90deg, rgba(196, 112, 63, 0.35) 0%, transparent 100%);
 }
 
 /* 字段网格 */
@@ -564,81 +564,81 @@ const handleSubmit = async () => {
 .field-label {
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.55);
+  color: #8A7B6C;
   letter-spacing: 0.04em;
 }
 
-/* 暗色输入框 */
+/* 奶油输入框 */
 .dark-input.ant-input,
 .dark-input.ant-picker {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: #FFFFFF !important;
+  border: 1px solid #E3D5C2 !important;
   border-radius: 12px !important;
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #3E3229 !important;
   transition: all 0.3s ease;
 }
 
 .dark-input.ant-input::placeholder,
 :deep(.dark-input .ant-picker-input > input::placeholder) {
-  color: rgba(255, 255, 255, 0.25) !important;
+  color: rgba(138, 123, 108, 0.5) !important;
 }
 
 .dark-input.ant-input:hover,
 .dark-input.ant-picker:hover {
-  border-color: rgba(255, 179, 71, 0.3) !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(196, 112, 63, 0.45) !important;
+  background: #FFFFFF !important;
 }
 
 .dark-input.ant-input:focus,
 .dark-input.ant-picker-focused {
-  border-color: #FFB347 !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 0 0 3px rgba(255, 179, 71, 0.12) !important;
+  border-color: #C4703F !important;
+  background: #FFFFFF !important;
+  box-shadow: 0 0 0 3px rgba(196, 112, 63, 0.14) !important;
 }
 
 .dark-input.ant-input:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 1000px #1a1530 inset !important;
-  -webkit-text-fill-color: rgba(255, 255, 255, 0.9) !important;
+  -webkit-box-shadow: 0 0 0 1000px #FBF6EF inset !important;
+  -webkit-text-fill-color: #3E3229 !important;
 }
 
 :deep(.dark-input .ant-picker-suffix),
 :deep(.dark-input .ant-picker-clear) {
-  color: rgba(255, 255, 255, 0.3) !important;
+  color: #B4A694 !important;
 }
 
 :deep(.dark-input .ant-picker-input > input) {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #3E3229 !important;
 }
 
 :deep(.dark-input .ant-picker-input > input:-webkit-autofill) {
-  -webkit-box-shadow: 0 0 0 1000px #1a1530 inset !important;
-  -webkit-text-fill-color: rgba(255, 255, 255, 0.9) !important;
+  -webkit-box-shadow: 0 0 0 1000px #FBF6EF inset !important;
+  -webkit-text-fill-color: #3E3229 !important;
 }
 
-/* 暗色选择框 */
+/* 奶油选择框 */
 .dark-select :deep(.ant-select-selector) {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: #FFFFFF !important;
+  border: 1px solid #E3D5C2 !important;
   border-radius: 12px !important;
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #3E3229 !important;
   transition: all 0.3s ease;
 }
 
 .dark-select :deep(.ant-select-selection-item) {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #3E3229 !important;
 }
 
 .dark-select :deep(.ant-select-arrow) {
-  color: rgba(255, 255, 255, 0.3) !important;
+  color: #B4A694 !important;
 }
 
 .dark-select:hover :deep(.ant-select-selector) {
-  border-color: rgba(255, 179, 71, 0.3) !important;
+  border-color: rgba(196, 112, 63, 0.45) !important;
 }
 
 .dark-select :deep(.ant-select-focused .ant-select-selector) {
-  border-color: #FFB347 !important;
-  box-shadow: 0 0 0 3px rgba(255, 179, 71, 0.12) !important;
+  border-color: #C4703F !important;
+  box-shadow: 0 0 0 3px rgba(196, 112, 63, 0.14) !important;
 }
 
 /* 天数芯片 */
@@ -649,9 +649,9 @@ const handleSubmit = async () => {
   gap: 4px;
   height: 48px; /* Matched to dark-input's large size */
   padding: 0 20px;
-  background: linear-gradient(135deg, #FFB347 0%, #FF6B6B 100%);
+  background: linear-gradient(135deg, #E8A87C 0%, #C4703F 100%);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(255, 179, 71, 0.3);
+  box-shadow: 0 4px 20px rgba(196, 112, 63, 0.28);
 }
 
 .days-number {
@@ -691,8 +691,8 @@ const handleSubmit = async () => {
   align-items: center;
   gap: 8px;
   padding: 16px 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid #EDE3D6;
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -700,47 +700,47 @@ const handleSubmit = async () => {
 }
 
 .interest-card:hover {
-  border-color: rgba(255, 179, 71, 0.3);
-  background: rgba(255, 179, 71, 0.06);
+  border-color: rgba(196, 112, 63, 0.45);
+  background: #FDF8F1;
   transform: translateY(-2px);
 }
 
 .interest-card.active {
-  border-color: #FFB347;
-  background: rgba(255, 179, 71, 0.12);
-  box-shadow: 0 0 20px rgba(255, 179, 71, 0.15);
+  border-color: #C4703F;
+  background: rgba(196, 112, 63, 0.1);
+  box-shadow: 0 0 20px rgba(196, 112, 63, 0.12);
 }
 
 .interest-name {
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.7);
+  color: #6B5B4C;
 }
 
 .interest-card.active .interest-name {
-  color: #FFD699;
+  color: #A65A2E;
 }
 
-/* 暗色文本域 */
+/* 奶油文本域 */
 .dark-textarea :deep(.ant-input) {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: #FFFFFF !important;
+  border: 1px solid #E3D5C2 !important;
   border-radius: 12px !important;
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #3E3229 !important;
   transition: all 0.3s ease;
 }
 
 .dark-textarea :deep(.ant-input::placeholder) {
-  color: rgba(255, 255, 255, 0.25) !important;
+  color: rgba(138, 123, 108, 0.5) !important;
 }
 
 .dark-textarea :deep(.ant-input:hover) {
-  border-color: rgba(255, 179, 71, 0.3) !important;
+  border-color: rgba(196, 112, 63, 0.45) !important;
 }
 
 .dark-textarea :deep(.ant-input:focus) {
-  border-color: #FFB347 !important;
-  box-shadow: 0 0 0 3px rgba(255, 179, 71, 0.12) !important;
+  border-color: #C4703F !important;
+  box-shadow: 0 0 0 3px rgba(196, 112, 63, 0.14) !important;
 }
 
 /* 提交按钮 */
@@ -753,13 +753,13 @@ const handleSubmit = async () => {
   font-family: inherit;
   font-size: 18px;
   font-weight: 600;
-  background: linear-gradient(135deg, #FFB347 0%, #FF6B6B 50%, #C084FC 100%);
+  background: linear-gradient(135deg, #E8A87C 0%, #C4703F 55%, #A65A2E 100%);
   background-size: 200% 200%;
-  color: white;
+  color: #FFF8F0;
   position: relative;
   overflow: hidden;
   transition: all 0.4s ease;
-  box-shadow: 0 8px 32px rgba(255, 107, 107, 0.3);
+  box-shadow: 0 8px 32px rgba(196, 112, 63, 0.28);
   animation: gradientShift 4s ease infinite;
 }
 
@@ -770,7 +770,7 @@ const handleSubmit = async () => {
 
 .submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(255, 107, 107, 0.4);
+  box-shadow: 0 12px 40px rgba(196, 112, 63, 0.36);
 }
 
 .submit-btn:active {
@@ -778,7 +778,7 @@ const handleSubmit = async () => {
 }
 
 .submit-btn.loading {
-  background: rgba(255, 255, 255, 0.1);
+  background: #E8D9C6;
   box-shadow: none;
   cursor: wait;
   animation: none;
@@ -794,8 +794,8 @@ const handleSubmit = async () => {
 .btn-spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #FFB347;
+  border: 2px solid rgba(196, 112, 63, 0.25);
+  border-top-color: #C4703F;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -813,23 +813,23 @@ const handleSubmit = async () => {
 .progress-track {
   width: 100%;
   height: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: #EDE3D6;
   border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #FFB347, #FF6B6B, #C084FC);
+  background: linear-gradient(90deg, #E8A87C, #C4703F, #A65A2E);
   border-radius: 3px;
   transition: width 0.5s ease;
-  box-shadow: 0 0 12px rgba(255, 179, 71, 0.4);
+  box-shadow: 0 0 12px rgba(196, 112, 63, 0.35);
 }
 
 .progress-text {
   margin-top: 12px;
   text-align: center;
-  color: #FFD699;
+  color: #A65A2E;
   font-size: 15px;
   font-weight: 500;
 }
@@ -846,13 +846,13 @@ const handleSubmit = async () => {
   }
 }
 
-/* Ant Design 全局暗色适配 */
+/* Ant Design 表单标签适配 */
 :deep(.ant-form-item-label > label) {
-  color: rgba(255, 255, 255, 0.55) !important;
+  color: #8A7B6C !important;
 }
 
 :deep(.ant-form-item-explain-error) {
-  color: #FF6B6B !important;
+  color: #C4553A !important;
 }
 
 /* 响应式 */

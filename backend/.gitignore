@@ -37,6 +37,10 @@ ENV/
 *.swo
 *~
 
+# 依赖与运行期数据（此前 node_modules 被误提交进了仓库）
+node_modules/
+*.db
+
 # 日志
 *.log
 

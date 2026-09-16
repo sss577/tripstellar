@@ -1,8 +1,8 @@
 {
   "app": {
-    "title": "TripStar",
-    "brand": "TripStar",
-    "subBrand": "TripStar · AI Travel Engine",
+    "title": "TripStellar",
+    "brand": "TripStellar",
+    "subBrand": "TripStellar · AI Travel Engine",
     "badge": "AI Travel Agent",
     "language": {
       "label": "Language",
@@ -10,7 +10,7 @@
       "ja": "日本語",
       "en": "English"
     },
-    "footerBrand": "TripStar",
+    "footerBrand": "TripStellar",
     "footerCopy": "{year} All rights reserved.",
     "footerTech": "Powered by HelloAgents + AMap MCP"
   },
@@ -60,12 +60,103 @@
       "loadFailed": "Failed to load settings",
       "saveFailed": "Failed to save settings",
       "saved": "Settings saved and applied"
+    },
+    "xhsQr": {
+      "button": "Update via QR",
+      "title": "Xiaohongshu QR Login",
+      "tip": "Scan the QR code with the Xiaohongshu (RED) app. The cookie will be updated automatically once logged in",
+      "loading": "Loading QR code...",
+      "waiting": "Waiting for scan...",
+      "restart": "Refresh QR code",
+      "success": "Login succeeded, XHS cookie updated automatically",
+      "failed": "Login failed",
+      "timeout": "QR code expired, please refresh and try again",
+      "startFailed": "Failed to start QR login"
+    }
+  },
+  "auth": {
+    "brandBadge": "AI Travel Agent",
+    "loginTitle": "Welcome Back",
+    "loginSubtitle": "Sign in to TripStellar and continue your journey",
+    "registerTitle": "Create Account",
+    "registerSubtitle": "Sign up to save your private trip plans",
+    "tab": {
+      "login": "Sign In",
+      "register": "Sign Up"
+    },
+    "account": "Username or Email",
+    "accountPlaceholder": "Enter username or email",
+    "password": "Password",
+    "passwordPlaceholder": "Enter password",
+    "username": "Username",
+    "usernamePlaceholder": "3-50 characters",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Enter password again",
+    "submitLogin": "Sign In",
+    "submitRegister": "Sign Up & Sign In",
+    "loginSuccess": "Signed in successfully",
+    "registerSuccess": "Registered and signed in",
+    "loginFailed": "Sign in failed",
+    "registerFailed": "Sign up failed",
+    "errors": {
+      "accountRequired": "Please enter username or email",
+      "passwordRequired": "Please enter password",
+      "usernameLength": "Username must be 3-50 characters",
+      "emailInvalid": "Please enter a valid email address",
+      "passwordLength": "Password must be at least 8 characters",
+      "confirmMismatch": "Passwords do not match"
+    },
+    "magazine": {
+      "issue": "VOL. 01 · FIRST ISSUE",
+      "deck": "Every departure, catalogued.",
+      "tagline": "A journey vast as the sea begins on this page. Sign in, and your travel plans will be kept on file.",
+      "edition": "TRIP PLANNING ISSUE"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "back": "Back to Home",
+    "sectionInfo": "Basic Info",
+    "sectionPassword": "Change Password",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "Display nickname",
+    "avatarUrl": "Avatar URL",
+    "avatarUrlPlaceholder": "https://example.com/avatar.png",
+    "email": "Email",
+    "joinedAt": "Joined",
+    "save": "Save Profile",
+    "saved": "Profile updated",
+    "saveFailed": "Failed to save profile",
+    "oldPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "submitPassword": "Change Password",
+    "passwordChanged": "Password changed, please sign in again",
+    "passwordChangeFailed": "Failed to change password",
+    "errors": {
+      "oldPasswordRequired": "Please enter current password",
+      "newPasswordLength": "New password must be at least 8 characters",
+      "confirmMismatch": "New passwords do not match"
+    }
+  },
+  "nav": {
+    "user": {
+      "profile": "Profile",
+      "logout": "Sign Out",
+      "loggedOut": "Signed out"
     }
   },
   "home": {
     "heroBadge": "AI Intelligent Itinerary Engine",
     "titleLine": "Unlock Every Possibility",
     "heroDesc": "Tell me your destination and preferences, and AI will craft a unique travel plan for you",
+    "heroIssue": "Issue 07",
+    "heroRail": "Travel Journal",
+    "heroMasthead": "TripStellar Journal",
+    "heroFootnote": "Destination · Taste · Itinerary, drafted in one pass",
+    "heroScroll": "Read on",
     "nav": {
       "cta": "Start Planning",
       "fogOn": "Fog On",
@@ -122,7 +213,7 @@
       "title": "Plan History",
       "refresh": "Refresh",
       "open": "Open",
-      "empty": "No saved plans yet",
+      "empty": "Plans you generate after signing in will be saved here",
       "updatedAt": "Updated",
       "loadFailed": "Failed to load plan history"
     },
@@ -230,8 +321,12 @@
     "backCreateTrip": "Back to Home to Create Trip",
     "chat": {
       "toggle": "AI Online",
+      "greetMorning": "Good morning! I'm TripStellar AI. Click me to start a chat!",
+      "greetNoon": "Good day! I'm TripStellar AI. Click me to start a chat!",
+      "greetAfternoon": "Good afternoon! I'm TripStellar AI. Click me to start a chat!",
+      "greetEvening": "Good evening! I'm TripStellar AI. Click me to start a chat!",
       "title": "Itinerary Q&A",
-      "welcome": "Hi! I am TripStar AI. Ask me anything about your itinerary, for example:",
+      "welcome": "Hi! I am TripStellar AI. Ask me anything about your itinerary, for example:",
       "quickPriceLabel": "Ticket Price",
       "quickSuitabilityLabel": "Senior Friendly?",
       "quickMealLabel": "Meal Cost",
@@ -285,7 +380,7 @@
     },
     "export": {
       "filePrefix": "TripPlan",
-      "footer": "Generated by TripStar · AI Travel Engine",
+      "footer": "Generated by TripStellar · AI Travel Engine",
       "title": "{city} Trip Plan",
       "subtitle": "{start} to {end} · {days} days",
       "perNight": "/night",

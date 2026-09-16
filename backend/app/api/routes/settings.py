@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ...config import get_runtime_settings, update_runtime_settings
+from ...services import xhs_login
 from ...services.amap_service import reset_amap_service
 from ...services.google_map_service import reset_google_map_service
 from ...services.llm_service import reset_llm
@@ -56,3 +57,26 @@ async def save_settings(payload: RuntimeSettingsPayload):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"保存配置失败: {str(e)}") from e
+
+
+@router.post("/xhs/login/start")
+async def start_xhs_qr_login():
+    """启动（或重启）小红书扫码登录会话，二维码通过 status 接口轮询获取。"""
+    try:
+        data = xhs_login.start_xhs_login()
+        return {"success": True, "message": "ok", "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"启动扫码登录失败: {str(e)}") from e
+
+
+@router.get("/xhs/login/status")
+async def get_xhs_qr_login_status():
+    """查询扫码登录状态：pending（含二维码 base64）/ success / failed / timeout。"""
+    return {"success": True, "message": "ok", "data": xhs_login.get_xhs_login_status()}
+
+
+@router.post("/xhs/login/cancel")
+async def cancel_xhs_qr_login():
+    """取消进行中的扫码登录会话。"""
+    xhs_login.cancel_xhs_login()
+    return {"success": True, "message": "ok"}

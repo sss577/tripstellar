@@ -1,8 +1,8 @@
 {
   "app": {
-    "title": "TripStar",
-    "brand": "TripStar",
-    "subBrand": "TripStar · AI 旅行エンジン",
+    "title": "TripStellar",
+    "brand": "TripStellar",
+    "subBrand": "TripStellar · AI 旅行エンジン",
     "badge": "AI 旅行アシスタント",
     "language": {
       "label": "言語",
@@ -10,7 +10,7 @@
       "ja": "日本語",
       "en": "English"
     },
-    "footerBrand": "TripStar",
+    "footerBrand": "TripStellar",
     "footerCopy": "{year} All rights reserved.",
     "footerTech": "Powered by HelloAgents + AMap MCP"
   },
@@ -60,12 +60,103 @@
       "loadFailed": "設定の読み込みに失敗しました",
       "saveFailed": "設定の保存に失敗しました",
       "saved": "設定を保存して適用しました"
+    },
+    "xhsQr": {
+      "button": "QRコードで更新",
+      "title": "RED（小紅書）QRログイン",
+      "tip": "RED（小紅書）アプリでQRコードをスキャンしてください。ログイン成功後、Cookie は自動的に更新されます",
+      "loading": "QRコードを取得中...",
+      "waiting": "スキャン待ち...",
+      "restart": "QRコードを更新",
+      "success": "ログイン成功、Cookie を自動更新しました",
+      "failed": "ログインに失敗しました",
+      "timeout": "QRコードの有効期限が切れました。更新してもう一度お試しください",
+      "startFailed": "QRログインの開始に失敗しました"
+    }
+  },
+  "auth": {
+    "brandBadge": "AI 旅行エージェント",
+    "loginTitle": "おかえりなさい",
+    "loginSubtitle": "TripStellar にログインして旅を続けましょう",
+    "registerTitle": "アカウント作成",
+    "registerSubtitle": "登録すると専用の旅行プランを保存できます",
+    "tab": {
+      "login": "ログイン",
+      "register": "新規登録"
+    },
+    "account": "ユーザー名またはメールアドレス",
+    "accountPlaceholder": "ユーザー名またはメールアドレスを入力",
+    "password": "パスワード",
+    "passwordPlaceholder": "パスワードを入力",
+    "username": "ユーザー名",
+    "usernamePlaceholder": "3〜50 文字",
+    "email": "メールアドレス",
+    "emailPlaceholder": "you@example.com",
+    "confirmPassword": "パスワード（確認）",
+    "confirmPasswordPlaceholder": "もう一度パスワードを入力",
+    "submitLogin": "ログイン",
+    "submitRegister": "登録してログイン",
+    "loginSuccess": "ログインしました",
+    "registerSuccess": "登録が完了し、ログインしました",
+    "loginFailed": "ログインに失敗しました",
+    "registerFailed": "登録に失敗しました",
+    "errors": {
+      "accountRequired": "ユーザー名またはメールアドレスを入力してください",
+      "passwordRequired": "パスワードを入力してください",
+      "usernameLength": "ユーザー名は 3〜50 文字にしてください",
+      "emailInvalid": "有効なメールアドレスを入力してください",
+      "passwordLength": "パスワードは 8 文字以上にしてください",
+      "confirmMismatch": "パスワードが一致しません"
+    },
+    "magazine": {
+      "issue": "VOL. 01 · 創刊号",
+      "deck": "すべての出発を、目録に。",
+      "tagline": "海を呑むような旅は、この一枚から始まります。ログインすると、あなただけの旅行プランが永久に保存されます。",
+      "edition": "TRIP PLANNING ISSUE"
+    }
+  },
+  "profile": {
+    "title": "プロフィール",
+    "back": "ホームへ戻る",
+    "sectionInfo": "基本情報",
+    "sectionPassword": "パスワード変更",
+    "nickname": "ニックネーム",
+    "nicknamePlaceholder": "表示用ニックネーム",
+    "avatarUrl": "アバター URL",
+    "avatarUrlPlaceholder": "https://example.com/avatar.png",
+    "email": "メールアドレス",
+    "joinedAt": "登録日",
+    "save": "保存する",
+    "saved": "プロフィールを更新しました",
+    "saveFailed": "プロフィールの保存に失敗しました",
+    "oldPassword": "現在のパスワード",
+    "newPassword": "新しいパスワード",
+    "confirmNewPassword": "新しいパスワード（確認）",
+    "submitPassword": "パスワードを変更",
+    "passwordChanged": "パスワードを変更しました。再度ログインしてください",
+    "passwordChangeFailed": "パスワードの変更に失敗しました",
+    "errors": {
+      "oldPasswordRequired": "現在のパスワードを入力してください",
+      "newPasswordLength": "新しいパスワードは 8 文字以上にしてください",
+      "confirmMismatch": "新しいパスワードが一致しません"
+    }
+  },
+  "nav": {
+    "user": {
+      "profile": "プロフィール",
+      "logout": "ログアウト",
+      "loggedOut": "ログアウトしました"
     }
   },
   "home": {
     "heroBadge": "AI 旅行プランニングエンジン",
     "titleLine": "世界を巡るあらゆる可能性へ",
     "heroDesc": "目的地と好みを教えてください。AI があなた専用の旅程を作成します",
+    "heroIssue": "第 07 号",
+    "heroRail": "旅の手記",
+    "heroMasthead": "TripStellar 星旅",
+    "heroFootnote": "目的地・好み・日程を、ひとつの稿に",
+    "heroScroll": "下へスクロール",
     "nav": {
       "cta": "プランを始める",
       "fogOn": "霧オン",
@@ -122,7 +213,7 @@
       "title": "履歴プラン",
       "refresh": "更新",
       "open": "詳細を見る",
-      "empty": "保存済みのプランはありません",
+      "empty": "ログイン後に作成した旅行プランがここに保存されます",
       "updatedAt": "更新",
       "loadFailed": "履歴プランの読み込みに失敗しました"
     },
@@ -230,8 +321,12 @@
     "backCreateTrip": "ホームで旅程を作成",
     "chat": {
       "toggle": "AI オンライン",
+      "greetMorning": "おはようございます。TripStellar AI です。クリックして話しかけてくださいね！",
+      "greetNoon": "こんにちは。TripStellar AI です。クリックして話しかけてくださいね！",
+      "greetAfternoon": "こんにちは。TripStellar AI です。クリックするとお話しできますよ！",
+      "greetEvening": "こんばんは。TripStellar AI です。クリックするとお話しできますよ！",
       "title": "旅程 AI チャット",
-      "welcome": "こんにちは。TripStar AI です。旅程に関することは何でも聞いてください。例：",
+      "welcome": "こんにちは。TripStellar AI です。旅程に関することは何でも聞いてください。例：",
       "quickPriceLabel": "料金確認",
       "quickSuitabilityLabel": "高齢者向け？",
       "quickMealLabel": "食費確認",
@@ -285,7 +380,7 @@
     },
     "export": {
       "filePrefix": "旅行プラン",
-      "footer": "TripStar · AI 旅行エンジンで生成",
+      "footer": "TripStellar · AI 旅行エンジンで生成",
       "title": "{city} 旅行プラン",
       "subtitle": "{start} 〜 {end} · {days} 日間",
       "perNight": "/泊",

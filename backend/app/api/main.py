@@ -16,7 +16,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from ..config import get_settings, validate_config, print_config
-from .routes import trip, poi, map as map_routes, chat, settings as settings_routes
+from ..database import init_db
+from .routes import trip, poi, map as map_routes, chat, settings as settings_routes, auth
 
 # 获取配置
 settings = get_settings()
@@ -58,6 +59,7 @@ app.include_router(poi.router, prefix="/api")
 app.include_router(map_routes.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(settings_routes.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
 
 
 @app.on_event("startup")
@@ -66,7 +68,13 @@ async def startup_event():
     print("\n" + "="*60)
     print(f"🚀 {settings.app_name} v{settings.app_version}")
     print("="*60)
-    
+
+    # 初始化数据库（建表 + 旧数据迁移）
+    await init_db()
+
+    # 预加载最近任务到内存
+    await trip.load_persisted_tasks()
+
     # 打印配置信息
     print_config()
     

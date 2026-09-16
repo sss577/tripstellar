@@ -1,8 +1,8 @@
 """数据模型定义"""
 
 from typing import List, Optional, Union
-from pydantic import BaseModel, Field, field_validator, model_validator
-from datetime import date
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from datetime import datetime, date
 
 
 # ============ 请求模型 ============
@@ -285,3 +285,65 @@ class TripChatResponse(BaseModel):
     """行程问答响应"""
     success: bool = Field(default=True, description="是否成功")
     reply: str = Field(..., description="AI回复内容")
+
+
+# ============ 用户认证模型 ============
+
+class RegisterRequest(BaseModel):
+    """注册请求"""
+    username: str = Field(..., min_length=3, max_length=50, description="用户名", example="traveler")
+    email: EmailStr = Field(..., description="邮箱", example="user@example.com")
+    password: str = Field(..., min_length=8, max_length=64, description="密码")
+
+
+class LoginRequest(BaseModel):
+    """登录请求"""
+    account: str = Field(..., description="用户名或邮箱", example="traveler")
+    password: str = Field(..., description="密码")
+
+
+class TokenPair(BaseModel):
+    """令牌对"""
+    access_token: str = Field(..., description="访问令牌")
+    refresh_token: str = Field(..., description="刷新令牌")
+    token_type: str = Field(default="bearer", description="令牌类型")
+
+
+class UserResponse(BaseModel):
+    """用户信息响应"""
+    id: int = Field(..., description="用户ID")
+    username: str = Field(..., description="用户名")
+    email: str = Field(..., description="邮箱")
+    nickname: str = Field(default="", description="昵称")
+    avatar_url: str = Field(default="", description="头像URL")
+    created_at: datetime = Field(..., description="注册时间")
+
+
+class AuthResponse(BaseModel):
+    """认证响应（登录/注册）"""
+    success: bool = Field(default=True, description="是否成功")
+    message: str = Field(default="", description="消息")
+    data: Optional[TokenPair] = Field(default=None, description="令牌对")
+    user: Optional[UserResponse] = Field(default=None, description="用户信息")
+
+
+class RefreshRequest(BaseModel):
+    """刷新令牌请求"""
+    refresh_token: str = Field(..., description="刷新令牌")
+
+
+class LogoutRequest(BaseModel):
+    """登出请求"""
+    refresh_token: str = Field(..., description="刷新令牌")
+
+
+class UpdateProfileRequest(BaseModel):
+    """更新用户资料请求"""
+    nickname: Optional[str] = Field(default=None, max_length=50, description="昵称")
+    avatar_url: Optional[str] = Field(default=None, max_length=500, description="头像URL")
+
+
+class ChangePasswordRequest(BaseModel):
+    """修改密码请求"""
+    old_password: str = Field(..., description="原密码")
+    new_password: str = Field(..., min_length=8, max_length=64, description="新密码")

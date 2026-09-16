@@ -1,5 +1,8 @@
 <template>
-  <nav class="navbar navbar-toggleable-md fixed-top navbar-transparent landing-navbar">
+  <nav
+    class="navbar navbar-toggleable-md fixed-top navbar-transparent landing-navbar"
+    :class="{ 'navbar-glass': glass }"
+  >
     <div class="container">
       <div class="navbar-translate">
         <button
@@ -11,7 +14,7 @@
           <span class="navbar-toggler-bar"></span>
           <span class="navbar-toggler-bar"></span>
         </button>
-        <button class="navbar-brand landing-brand" type="button" @click="handleBrandClick">TripStar</button>
+        <button class="navbar-brand landing-brand" type="button" @click="handleBrandClick">TripStellar</button>
       </div>
       <div class="navbar-collapse landing-navbar-collapse" id="navbarToggler">
         <ul class="navbar-nav ml-auto landing-nav">
@@ -52,6 +55,39 @@
             >
               <svg width="25px" height="25px" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M600.704 64a32 32 0 0 1 30.464 22.208l35.2 109.376c14.784 7.232 28.928 15.36 42.432 24.512l112.384-24.192a32 32 0 0 1 34.432 15.36L944.32 364.8a32 32 0 0 1-4.032 37.504l-77.12 85.12a357.12 357.12 0 0 1 0 49.024l77.12 85.248a32 32 0 0 1 4.032 37.504l-88.704 153.6a32 32 0 0 1-34.432 15.296L708.8 803.904c-13.44 9.088-27.648 17.28-42.368 24.512l-35.264 109.376A32 32 0 0 1 600.704 960H423.296a32 32 0 0 1-30.464-22.208L357.696 828.48a351.616 351.616 0 0 1-42.56-24.64l-112.32 24.256a32 32 0 0 1-34.432-15.36L79.68 659.2a32 32 0 0 1 4.032-37.504l77.12-85.248a357.12 357.12 0 0 1 0-48.896l-77.12-85.248A32 32 0 0 1 79.68 364.8l88.704-153.6a32 32 0 0 1 34.432-15.296l112.32 24.256c13.568-9.152 27.776-17.408 42.56-24.64l35.2-109.312A32 32 0 0 1 423.232 64H600.64zm-23.424 64H446.72l-36.352 113.088-24.512 11.968a294.113 294.113 0 0 0-34.816 20.096l-22.656 15.36-116.224-25.088-65.28 113.152 79.68 88.192-1.92 27.136a293.12 293.12 0 0 0 0 40.192l1.92 27.136-79.808 88.192 65.344 113.152 116.224-25.024 22.656 15.296a294.113 294.113 0 0 0 34.816 20.096l24.512 11.968L446.72 896h130.688l36.48-113.152 24.448-11.904a288.282 288.282 0 0 0 34.752-20.096l22.592-15.296 116.288 25.024 65.28-113.152-79.744-88.192 1.92-27.136a293.12 293.12 0 0 0 0-40.256l-1.92-27.136 79.808-88.128-65.344-113.152-116.288 24.96-22.592-15.232a287.616 287.616 0 0 0-34.752-20.096l-24.448-11.904L577.344 128zM512 320a192 192 0 1 1 0 384 192 192 0 0 1 0-384zm0 64a128 128 0 1 0 0 256 128 128 0 0 0 0-256z"/></svg>
             </button>
+          </li>
+          <li class="nav-item landing-user-item">
+            <a-dropdown
+              placement="bottomRight"
+              :trigger="['hover', 'click']"
+              overlay-class-name="landing-user-dropdown"
+            >
+              <button type="button" class="landing-user-btn" @click.prevent>
+                <img
+                  v-if="authState.user?.avatar_url"
+                  :src="authState.user.avatar_url"
+                  alt="avatar"
+                  class="user-avatar-img"
+                  @error="(e: Event) => (e.target as HTMLImageElement).style.display = 'none'"
+                />
+                <span v-else class="user-avatar-fallback">{{ userInitial }}</span>
+                <span class="user-name">{{ authState.user?.nickname || authState.user?.username }}</span>
+                <svg class="user-menu-caret" width="10px" height="10px" viewBox="0 0 1024 1024" aria-hidden="true">
+                  <path fill="currentColor" d="M884 256h-75c-5.1 0-9.9 2.5-12.9 6.6L512 654.2 227.9 262.6c-3-4.1-7.8-6.6-12.9-6.6h-75c-6.5 0-10.3 7.4-6.5 12.7l352.6 486.1c12.8 17.6 39 17.6 51.7 0l352.6-486.1c3.9-5.3 0.1-12.7-6.4-12.7z" />
+                </svg>
+              </button>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item key="profile" @click="goProfile">
+                    {{ t('nav.user.profile') }}
+                  </a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="logout" @click="handleLogout">
+                    {{ t('nav.user.logout') }}
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </li>
           <li class="nav-item">
             <button type="button" class="btn btn-danger btn-round landing-cta" @click="handleCtaClick">
@@ -156,6 +192,15 @@
             <a-form-item class="runtime-settings-full">
               <template #label>
                 <span class="field-label">{{ t('settings.labels.xhsCookie') }}</span>
+                <a-button
+                  type="link"
+                  size="small"
+                  class="xhs-qr-btn"
+                  :loading="xhsQrStarting"
+                  @click="openXhsQrLogin"
+                >
+                  {{ t('settings.xhsQr.button') }}
+                </a-button>
               </template>
               <a-textarea
                 v-model:value="settingsForm.xhs_cookie"
@@ -168,17 +213,105 @@
         </section>
       </a-spin>
     </a-modal>
+
+    <a-modal
+      v-model:open="xhsQrVisible"
+      class="xhs-qr-modal"
+      :title="t('settings.xhsQr.title')"
+      :footer="null"
+      :width="400"
+      @cancel="closeXhsQrLogin"
+    >
+      <div class="xhs-qr-panel">
+        <p class="xhs-qr-tip">{{ t('settings.xhsQr.tip') }}</p>
+        <div class="xhs-qr-image-wrap">
+          <a-spin v-if="!xhsQrBase64" :tip="t('settings.xhsQr.loading')" />
+          <img
+            v-else
+            :src="`data:image/png;base64,${xhsQrBase64}`"
+            alt="小红书登录二维码"
+            class="xhs-qr-image"
+          />
+        </div>
+        <a-alert
+          v-if="xhsQrMessageText"
+          :message="xhsQrMessageText"
+          :type="xhsQrAlertType"
+          show-icon
+          class="xhs-qr-alert"
+        />
+        <div v-else-if="xhsQrStatus === 'pending'" class="xhs-qr-pending">
+          {{ t('settings.xhsQr.waiting') }}
+        </div>
+        <div class="xhs-qr-actions">
+          <a-button :disabled="xhsQrStarting" @click="restartXhsQrLogin">
+            {{ t('settings.xhsQr.restart') }}
+          </a-button>
+        </div>
+      </div>
+    </a-modal>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useI18n } from 'vue-i18n'
 import type { RuntimeSettings } from '@/types'
-import { getRuntimeSettings, saveRuntimeSettings } from '@/services/api'
+import {
+  cancelXhsQrLogin,
+  getRuntimeSettings,
+  getXhsQrLoginStatus,
+  saveRuntimeSettings,
+  startXhsQrLogin,
+} from '@/services/api'
+import { authState, logout } from '@/services/auth'
 
+const router = useRouter()
 const { t, locale } = useI18n()
+
+/** overHero：页面首屏是整屏大图（落地页）时为 true，导航才会走玻璃态 */
+const props = withDefaults(defineProps<{ overHero?: boolean }>(), { overHero: false })
+
+/** 是否已经滚过首屏。滚过之后导航恢复实底，否则浅色页面上的浅色文字会看不清 */
+const scrolled = ref(false)
+const syncScrolled = () => {
+  // 首屏结束时（大图刚好完全移出导航下方）切换，避免中途来回跳
+  scrolled.value = window.scrollY > Math.max(window.innerHeight - 88, 120)
+}
+
+/** 仅「首屏大图上方 + 尚未滚动」时使用玻璃透明效果 */
+const glass = computed(() => props.overHero && !scrolled.value)
+
+onMounted(() => {
+  syncScrolled()
+  window.addEventListener('scroll', syncScrolled, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', syncScrolled)
+})
+
+const userInitial = computed(() => {
+  const name = authState.user?.nickname || authState.user?.username || '?'
+  return name.slice(0, 1).toUpperCase()
+})
+
+const goProfile = () => {
+  router.push('/profile')
+}
+
+const handleLogout = async () => {
+  try {
+    await logout()
+    message.success(t('nav.user.loggedOut'))
+    router.push('/login')
+  } catch {
+    router.push('/login')
+  }
+}
+
 const settingsVisible = ref(false)
 const settingsLoading = ref(false)
 const settingsSaving = ref(false)
@@ -256,6 +389,113 @@ const saveSettingsNow = async () => {
     settingsSaving.value = false
   }
 }
+
+// ============ 小红书扫码登录 ============
+type XhsQrStatus = 'idle' | 'pending' | 'success' | 'failed' | 'timeout'
+
+const xhsQrVisible = ref(false)
+const xhsQrStarting = ref(false)
+const xhsQrBase64 = ref('')
+const xhsQrStatus = ref<XhsQrStatus>('idle')
+const xhsQrMessage = ref('')
+let xhsQrTimer: number | null = null
+
+const xhsQrMessageText = computed(() => {
+  if (!xhsQrMessage.value) return ''
+  if (xhsQrStatus.value === 'timeout') return t('settings.xhsQr.timeout')
+  if (xhsQrStatus.value === 'failed') return `${t('settings.xhsQr.failed')}: ${xhsQrMessage.value}`
+  if (xhsQrStatus.value === 'success') return t('settings.xhsQr.success')
+  return xhsQrMessage.value
+})
+
+const xhsQrAlertType = computed(() => {
+  if (xhsQrStatus.value === 'success') return 'success'
+  if (xhsQrStatus.value === 'failed' || xhsQrStatus.value === 'timeout') return 'error'
+  return 'info'
+})
+
+const stopXhsQrPolling = () => {
+  if (xhsQrTimer !== null) {
+    window.clearInterval(xhsQrTimer)
+    xhsQrTimer = null
+  }
+}
+
+const pollXhsQrStatus = async () => {
+  let status
+  try {
+    status = await getXhsQrLoginStatus()
+  } catch {
+    return // 网络抖动继续轮询
+  }
+  if (status.qrcode_base64) {
+    xhsQrBase64.value = status.qrcode_base64
+  }
+  xhsQrStatus.value = status.status
+  xhsQrMessage.value = status.message
+
+  if (status.status === 'success') {
+    stopXhsQrPolling()
+    message.success(t('settings.xhsQr.success'))
+    try {
+      const settings = await getRuntimeSettings()
+      applyRuntimeSettings(settings)
+    } catch {
+      // 表单回填失败不影响 Cookie 已生效
+    }
+    xhsQrVisible.value = false
+  } else if (status.status === 'failed' || status.status === 'timeout') {
+    stopXhsQrPolling()
+  }
+}
+
+const startXhsQrPolling = () => {
+  stopXhsQrPolling()
+  void pollXhsQrStatus()
+  xhsQrTimer = window.setInterval(() => {
+    void pollXhsQrStatus()
+  }, 2000)
+}
+
+const launchXhsQrSession = async () => {
+  xhsQrBase64.value = ''
+  xhsQrStatus.value = 'pending'
+  xhsQrMessage.value = ''
+  xhsQrStarting.value = true
+  try {
+    await startXhsQrLogin()
+    startXhsQrPolling()
+  } catch (error: any) {
+    message.error(error?.message || t('settings.xhsQr.startFailed'))
+    xhsQrVisible.value = false
+  } finally {
+    xhsQrStarting.value = false
+  }
+}
+
+const openXhsQrLogin = async () => {
+  xhsQrVisible.value = true
+  await launchXhsQrSession()
+}
+
+const restartXhsQrLogin = async () => {
+  await launchXhsQrSession()
+}
+
+const closeXhsQrLogin = () => {
+  stopXhsQrPolling()
+  if (xhsQrStatus.value === 'pending') {
+    void cancelXhsQrLogin()
+  }
+  xhsQrVisible.value = false
+}
+
+onBeforeUnmount(() => {
+  stopXhsQrPolling()
+  if (xhsQrStatus.value === 'pending') {
+    void cancelXhsQrLogin()
+  }
+})
 </script>
 
 <style scoped>
@@ -268,32 +508,102 @@ const saveSettingsNow = async () => {
   z-index: 1030 !important;
   min-height: 70px;
   padding: 0 !important;
-  background: transparent !important;
-  background-color: transparent !important;
+  background: rgba(236, 236, 233, 0.86) !important;
+  background-color: rgba(236, 236, 233, 0.86) !important;
   background-image: none !important;
   box-shadow: none !important;
   border: none !important;
-  border-bottom: 1px solid transparent !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  transition: background 0.3s;
+  border-bottom: 1px solid var(--ts-rule) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  transition: background 0.35s var(--ts-ease), background-color 0.35s var(--ts-ease),
+    border-color 0.35s var(--ts-ease);
 }
 
 .landing-navbar:not(.navbar-transparent) {
-  background: transparent !important;
-  background-color: transparent !important;
+  background: rgba(236, 236, 233, 0.86) !important;
+  background-color: rgba(236, 236, 233, 0.86) !important;
   background-image: none !important;
-  border-color: transparent !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  border-color: var(--ts-rule) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
 }
 
 .landing-navbar.navbar-transparent {
   padding-top: 0 !important;
+  background: rgba(236, 236, 233, 0.86) !important;
+  background-color: rgba(236, 236, 233, 0.86) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* 全透明态：首屏大图上方的导航。
+   不铺底色、不做模糊、不加分隔线，背景图从导航区域完整透上来。
+   只把文字整体翻成浅色——深墨字压在暗色大图上完全看不清。
+   滚过首屏后自动退回上面的实底样式 */
+.landing-navbar.navbar-glass {
   background: transparent !important;
   background-color: transparent !important;
   background-image: none !important;
+  border-bottom: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
+}
+
+.landing-navbar.navbar-glass .landing-brand,
+.landing-navbar.navbar-glass .landing-nav .nav-item .nav-link,
+.landing-navbar.navbar-glass .settings-btn,
+.landing-navbar.navbar-glass .user-name,
+.landing-navbar.navbar-glass .user-menu-caret {
+  color: rgba(250, 248, 244, 0.94) !important;
+  /* 透明底上没有承托层，滚动时字会压到照片亮部，用一层深色字晕兜底 */
+  text-shadow: 0 1px 10px rgba(6, 8, 14, 0.6), 0 0 3px rgba(6, 8, 14, 0.45);
+}
+
+/* 图标是 SVG，text-shadow 不生效，改用投影 */
+.landing-navbar.navbar-glass .landing-nav .nav-item .nav-link svg,
+.landing-navbar.navbar-glass .settings-btn svg,
+.landing-navbar.navbar-glass .user-menu-caret {
+  filter: drop-shadow(0 1px 6px rgba(6, 8, 14, 0.6));
+}
+
+.landing-navbar.navbar-glass .landing-brand:hover,
+.landing-navbar.navbar-glass .landing-nav .nav-item .nav-link:hover,
+.landing-navbar.navbar-glass .settings-btn:hover {
+  color: #ffb347 !important;
+}
+
+/* 语言选择器与用户菜单：完全透明，只留浅色细描边标识可点区域 */
+.landing-navbar.navbar-glass .lang-select-nav :deep(.ant-select-selector) {
+  border-color: rgba(250, 248, 244, 0.36) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.landing-navbar.navbar-glass .lang-select-nav :deep(.ant-select-selection-item),
+.landing-navbar.navbar-glass .lang-select-nav :deep(.ant-select-arrow) {
+  color: rgba(250, 248, 244, 0.94) !important;
+  text-shadow: 0 1px 8px rgba(6, 8, 14, 0.6);
+}
+
+.landing-navbar.navbar-glass .landing-user-btn {
+  border-color: rgba(250, 248, 244, 0.36) !important;
+  background: transparent !important;
+}
+
+.landing-navbar.navbar-glass .landing-user-btn:hover {
+  border-color: rgba(250, 248, 244, 0.62) !important;
+}
+
+.landing-navbar.navbar-glass .user-avatar-img {
+  border-color: rgba(250, 248, 244, 0.4);
+}
+
+/* 头像兜底块的墨底在暗色照片上会糊成一块，换成浅底深字 */
+.landing-navbar.navbar-glass .user-avatar-fallback {
+  background: rgba(250, 248, 244, 0.94);
+  color: #16202e;
 }
 
 .landing-navbar *,
@@ -304,13 +614,13 @@ const saveSettingsNow = async () => {
 
 .landing-navbar .container {
   width: 100% !important;
-  max-width: 100vw !important;
+  max-width: 1440px !important;
   min-height: 70px;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding-left: 20px;
-  padding-right: 20px;
+  padding-left: 32px;
+  padding-right: 32px;
   box-sizing: border-box !important;
 }
 
@@ -334,16 +644,24 @@ const saveSettingsNow = async () => {
 .landing-brand {
   background: transparent !important;
   border: 0;
-  color: #f4f8fc !important;
+  color: var(--ts-ink) !important;
+  font-family: var(--ts-font-serif) !important;
   font-weight: 700 !important;
-  letter-spacing: 0.12em !important;
+  letter-spacing: 0.16em !important;
   text-transform: uppercase;
-  font-size: 13px !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
   cursor: pointer;
   min-height: 34px;
+  padding-left: 0.16em !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: color 0.25s var(--ts-ease);
+}
+
+.landing-brand:hover {
+  color: var(--ts-accent) !important;
 }
 
 .landing-navbar-collapse {
@@ -389,35 +707,118 @@ const saveSettingsNow = async () => {
   padding: 0 !important;
   line-height: 1 !important;
   opacity: 1 !important;
+  color: var(--ts-ink-2) !important;
+  transition: color 0.25s var(--ts-ease);
+}
+
+.landing-nav .nav-item .nav-link:hover {
+  color: var(--ts-accent) !important;
 }
 
 .landing-nav-btn {
-  border: 1.2px solid rgba(236, 243, 250, 0.24);
-  background: rgba(12, 23, 32, 0.56);
-  color: #ecf3fa;
-  border-radius: 999px;
+  border: 1px solid var(--ts-rule-strong);
+  background: transparent;
+  color: var(--ts-ink-2);
+  border-radius: var(--ts-r-sm);
   padding: 0 12px;
-  min-height: 34px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  min-height: 32px;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: var(--ts-tracking-caps);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   text-transform: uppercase;
+  transition: border-color 0.25s var(--ts-ease), color 0.25s var(--ts-ease),
+    background 0.25s var(--ts-ease);
+}
+
+.landing-nav-btn:hover {
+  border-color: var(--ts-accent);
+  color: var(--ts-accent);
 }
 
 .settings-btn {
   text-transform: none;
   border: none !important;
   background: none !important;
+  padding: 0 6px !important;
+  color: var(--ts-ink-2) !important;
+}
+
+.settings-btn:hover {
+  color: var(--ts-accent) !important;
+}
+
+/* 用户菜单 */
+.landing-user-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.landing-user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 10px 0 3px;
+  border: 1px solid var(--ts-rule-strong);
+  background: transparent;
+  border-radius: var(--ts-r-sm);
+  cursor: pointer;
+  transition: border-color 0.25s var(--ts-ease);
+}
+
+.landing-user-btn:hover {
+  border-color: var(--ts-accent);
+}
+
+.user-avatar-img,
+.user-avatar-fallback {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--ts-r-sm);
+  flex-shrink: 0;
+}
+
+.user-avatar-img {
+  object-fit: cover;
+  border: 1px solid var(--ts-rule);
+}
+
+.user-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ts-ink);
+  color: var(--ts-paper);
+  font-family: var(--ts-font-serif);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.user-name {
+  color: var(--ts-ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-caret {
+  color: var(--ts-ink-3);
+  flex-shrink: 0;
 }
 
 .fog-toggle[aria-pressed='true'] {
-  border-color: rgba(215, 110, 66, 0.55);
-  background: rgba(215, 110, 66, 0.2);
-  color: #ffe3d6;
+  border-color: var(--ts-accent-line);
+  background: var(--ts-accent-soft);
+  color: var(--ts-accent);
 }
 
 .landing-lang-item {
@@ -426,39 +827,58 @@ const saveSettingsNow = async () => {
 }
 
 .lang-select-nav {
-  width: 110px;
+  width: 108px;
 }
 
 .lang-select-nav :deep(.ant-select-selector) {
-  height: 34px !important;
-  padding: 0 12px !important;
-  border: 1.2px solid rgba(236, 243, 250, 0.24) !important;
-  background: rgba(12, 23, 32, 0.56) !important;
-  border-radius: 999px !important;
+  height: 32px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--ts-rule-strong) !important;
+  background: transparent !important;
+  border-radius: var(--ts-r-sm) !important;
+  box-shadow: none !important;
   display: flex !important;
   align-items: center !important;
 }
 
 .lang-select-nav :deep(.ant-select-selection-item) {
-  line-height: 32px !important;
-  font-size: 12px !important;
+  line-height: 30px !important;
+  font-family: var(--ts-font-mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.06em !important;
 }
 
 .lang-select-nav :deep(.ant-select-selection-item),
 .lang-select-nav :deep(.ant-select-arrow) {
-  color: #ecf3fa !important;
+  color: var(--ts-ink-2) !important;
 }
 
 .landing-cta {
   min-height: 32px;
-  padding: 0 14px !important;
-  font-size: 12px !important;
-  border: none !important;
-  letter-spacing: 0.06em;
+  padding: 0 16px !important;
+  font-family: var(--ts-font-mono) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  border: 1px solid var(--ts-accent) !important;
+  border-radius: var(--ts-r-sm) !important;
+  letter-spacing: var(--ts-tracking-caps);
+  text-transform: uppercase;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
   margin: 0 !important;
+  background-color: var(--ts-accent) !important;
+  background-image: none !important;
+  color: var(--ts-paper) !important;
+  box-shadow: none !important;
+  transition: background 0.25s var(--ts-ease), border-color 0.25s var(--ts-ease);
+}
+
+.landing-cta:hover,
+.landing-cta:focus {
+  background-color: var(--ts-accent-deep) !important;
+  border-color: var(--ts-accent-deep) !important;
+  color: var(--ts-paper) !important;
 }
 
 .landing-navbar .btn {
@@ -501,9 +921,9 @@ const saveSettingsNow = async () => {
   }
 
   .landing-brand {
-    font-size: 10px !important;
-    letter-spacing: 0.05em !important;
-    max-width: 70px;
+    font-size: 12px !important;
+    letter-spacing: 0.1em !important;
+    max-width: 82px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -541,5 +961,100 @@ const saveSettingsNow = async () => {
 
 .runtime-settings-form :deep(.ant-form-item) {
   margin-bottom: 12px;
+}
+
+/* 小红书扫码登录 */
+.xhs-qr-btn {
+  padding: 0 4px;
+  height: auto;
+  font-size: 12px;
+}
+
+.xhs-qr-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0 8px;
+}
+
+.xhs-qr-tip {
+  margin: 0;
+  text-align: center;
+  color: var(--ts-ink-3);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.xhs-qr-image-wrap {
+  width: 240px;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ts-rule);
+  border-radius: var(--ts-r-sm);
+  padding: 10px;
+  background: var(--ts-card);
+}
+
+.xhs-qr-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--ts-r-sm);
+}
+
+.xhs-qr-alert {
+  width: 100%;
+}
+
+.xhs-qr-pending {
+  color: var(--ts-ink-3);
+  font-size: 13px;
+}
+
+.xhs-qr-actions {
+  display: flex;
+  justify-content: center;
+}
+</style>
+
+<!-- 用户下拉菜单浮层：ant-design-vue 会将菜单 teleport 到 body，scoped 样式无法命中，需用全局样式覆盖 -->
+<style>
+.landing-user-dropdown .ant-menu,
+.landing-user-dropdown .ant-dropdown-menu {
+  background: var(--ts-card) !important;
+  border: 1px solid var(--ts-rule);
+  border-radius: var(--ts-r-md);
+  padding: 4px;
+  box-shadow: var(--ts-shadow);
+}
+
+.landing-user-dropdown .ant-menu-item,
+.landing-user-dropdown .ant-dropdown-menu-item,
+.landing-user-dropdown .ant-menu-title-content,
+.landing-user-dropdown .ant-dropdown-menu-title-content {
+  color: var(--ts-ink-2) !important;
+  font-family: var(--ts-font-sans);
+}
+
+.landing-user-dropdown .ant-menu-item:hover,
+.landing-user-dropdown .ant-menu-item-active,
+.landing-user-dropdown .ant-dropdown-menu-item:hover,
+.landing-user-dropdown .ant-dropdown-menu-item-active {
+  color: var(--ts-accent) !important;
+  background: var(--ts-accent-soft) !important;
+}
+
+.landing-user-dropdown .ant-menu-item:hover .ant-menu-title-content,
+.landing-user-dropdown .ant-menu-item:hover .ant-dropdown-menu-title-content,
+.landing-user-dropdown .ant-dropdown-menu-item:hover .ant-dropdown-menu-title-content {
+  color: var(--ts-accent) !important;
+}
+
+.landing-user-dropdown .ant-menu-item-divider,
+.landing-user-dropdown .ant-dropdown-menu-item-divider {
+  background-color: var(--ts-rule) !important;
 }
 </style>

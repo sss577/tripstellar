@@ -1,8 +1,8 @@
 {
   "app": {
-    "title": "旅途星辰",
-    "brand": "旅途星辰",
-    "subBrand": "TripStar · AI 旅行引擎",
+    "title": "星旅",
+    "brand": "星旅",
+    "subBrand": "TripStellar · AI 旅行引擎",
     "badge": "AI 文旅智能体",
     "language": {
       "label": "语言",
@@ -10,7 +10,7 @@
       "ja": "日本語",
       "en": "English"
     },
-    "footerBrand": "旅途星辰",
+    "footerBrand": "星旅",
     "footerCopy": "{year} All rights reserved.",
     "footerTech": "Powered by HelloAgents + 高德 MCP"
   },
@@ -60,12 +60,103 @@
       "loadFailed": "读取设置失败",
       "saveFailed": "保存设置失败",
       "saved": "设置已保存并应用"
+    },
+    "xhsQr": {
+      "button": "扫码更新",
+      "title": "小红书扫码登录",
+      "tip": "请使用小红书 App 扫描二维码，登录成功后 Cookie 将自动更新并立即生效",
+      "loading": "正在获取二维码...",
+      "waiting": "等待扫码中...",
+      "restart": "刷新二维码",
+      "success": "登录成功，小红书 Cookie 已自动更新",
+      "failed": "登录失败",
+      "timeout": "二维码已过期，请刷新后重新扫码",
+      "startFailed": "启动扫码登录失败"
+    }
+  },
+  "auth": {
+    "brandBadge": "AI 文旅智能体",
+    "loginTitle": "欢迎回来",
+    "loginSubtitle": "登录星旅，继续你的旅程",
+    "registerTitle": "创建账号",
+    "registerSubtitle": "注册后即可保存你的专属旅行计划",
+    "tab": {
+      "login": "登录",
+      "register": "注册"
+    },
+    "account": "用户名或邮箱",
+    "accountPlaceholder": "输入用户名或邮箱",
+    "password": "密码",
+    "passwordPlaceholder": "输入密码",
+    "username": "用户名",
+    "usernamePlaceholder": "3-50 个字符",
+    "email": "邮箱",
+    "emailPlaceholder": "you@example.com",
+    "confirmPassword": "确认密码",
+    "confirmPasswordPlaceholder": "再次输入密码",
+    "submitLogin": "登录",
+    "submitRegister": "注册并登录",
+    "loginSuccess": "登录成功",
+    "registerSuccess": "注册成功，已自动登录",
+    "loginFailed": "登录失败",
+    "registerFailed": "注册失败",
+    "errors": {
+      "accountRequired": "请输入用户名或邮箱",
+      "passwordRequired": "请输入密码",
+      "usernameLength": "用户名长度需为 3-50 个字符",
+      "emailInvalid": "请输入有效的邮箱地址",
+      "passwordLength": "密码至少 8 位",
+      "confirmMismatch": "两次输入的密码不一致"
+    },
+    "magazine": {
+      "issue": "VOL. 01 · 创刊号",
+      "deck": "把每一次出发，都排进目录。",
+      "tagline": "鲸吞山海的旅程，从这一页开始。登录后，你的专属旅行计划将永久存档。",
+      "edition": "TRIP PLANNING ISSUE"
+    }
+  },
+  "profile": {
+    "title": "个人资料",
+    "back": "返回首页",
+    "sectionInfo": "基本信息",
+    "sectionPassword": "修改密码",
+    "nickname": "昵称",
+    "nicknamePlaceholder": "展示用昵称",
+    "avatarUrl": "头像 URL",
+    "avatarUrlPlaceholder": "https://example.com/avatar.png",
+    "email": "邮箱",
+    "joinedAt": "注册于",
+    "save": "保存资料",
+    "saved": "资料已更新",
+    "saveFailed": "保存资料失败",
+    "oldPassword": "原密码",
+    "newPassword": "新密码",
+    "confirmNewPassword": "确认新密码",
+    "submitPassword": "修改密码",
+    "passwordChanged": "密码已修改，请重新登录",
+    "passwordChangeFailed": "修改密码失败",
+    "errors": {
+      "oldPasswordRequired": "请输入原密码",
+      "newPasswordLength": "新密码至少 8 位",
+      "confirmMismatch": "两次输入的新密码不一致"
+    }
+  },
+  "nav": {
+    "user": {
+      "profile": "个人资料",
+      "logout": "退出登录",
+      "loggedOut": "已退出登录"
     }
   },
   "home": {
     "heroBadge": "AI 智能行程规划引擎",
     "titleLine": "探索世界的每一种可能",
     "heroDesc": "告诉我你的目的地与偏好，AI 将为你定制一份独一无二的旅程方案",
+    "heroIssue": "第 07 期",
+    "heroRail": "旅行手记",
+    "heroMasthead": "TripStellar 星旅",
+    "heroFootnote": "目的地 · 偏好 · 行程，一次成稿",
+    "heroScroll": "向下阅读",
     "nav": {
       "cta": "开始定制",
       "fogOn": "雾气开启",
@@ -122,7 +213,7 @@
       "title": "历史计划",
       "refresh": "刷新",
       "open": "查看详情",
-      "empty": "暂无历史计划",
+      "empty": "登录后生成的旅行计划会保存在这里",
       "updatedAt": "更新于",
       "loadFailed": "读取历史计划失败"
     },
@@ -230,8 +321,12 @@
     "backCreateTrip": "返回首页创建行程",
     "chat": {
       "toggle": "AI 在线",
+      "greetMorning": "早上好，我是星旅AI，点击我可以和我对话哟！",
+      "greetNoon": "中午好，我是星旅AI，点击我可以和我对话哟！",
+      "greetAfternoon": "下午好，我是星旅AI，点击我可以和我对话哟！",
+      "greetEvening": "晚上好，我是星旅AI，点击我可以和我对话哟！",
       "title": "行程智能问答",
-      "welcome": "您好！我是旅途星辰 AI，可以问我关于行程的任何问题，例如：",
+      "welcome": "您好！我是星旅 AI，可以问我关于行程的任何问题，例如：",
       "quickPriceLabel": "票价查询",
       "quickSuitabilityLabel": "适合老人？",
       "quickMealLabel": "餐饮价格",
@@ -285,7 +380,7 @@
     },
     "export": {
       "filePrefix": "旅行计划",
-      "footer": "由 旅途星辰 TripStar · AI 旅行引擎 生成",
+      "footer": "由 星旅 TripStellar · AI 旅行引擎 生成",
       "title": "{city} 旅行计划",
       "subtitle": "{start} 至 {end} · {days} 天行程",
       "perNight": "/晚",

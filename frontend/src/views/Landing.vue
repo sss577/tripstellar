@@ -1,20 +1,44 @@
 <template>
   <div class="landing-page">
     <div class="lower-shade" :style="lowerShadeStyle"></div>
-    <NavBar @brand-click="scrollToTop" @cta-click="scrollToForm" />
+    <NavBar over-hero @brand-click="scrollToTop" @cta-click="scrollToForm" />
 
     <div class="wrapper">
-      <div class="page-header section-dark landing-header" :style="pageHeaderStyle">
+      <div class="page-header section-dark landing-header">
+        <!-- 背景：环极星轨照片。外层走滚动视差，内层做常驻的缓慢推镜 -->
+        <div class="hero-media" :style="heroMediaStyle" aria-hidden="true">
+          <div class="hero-media-img">
+            <!-- 沿同心圆轨道绕极点运行的星点层 -->
+            <canvas ref="starCanvasRef" class="hero-stars"></canvas>
+          </div>
+        </div>
+        <div class="hero-vignette" aria-hidden="true"></div>
+        <!-- 偶尔划过的流星 -->
+        <span class="hero-meteor" aria-hidden="true"></span>
+        <span class="hero-meteor hero-meteor-2" aria-hidden="true"></span>
+        <div class="hero-frame" aria-hidden="true"></div>
         <div class="filter"></div>
+        <div class="hero-rail" aria-hidden="true">
+          <span class="hero-rail-text">{{ t('home.heroRail') }}</span>
+        </div>
         <div class="content-center" :style="heroContentStyle">
           <div class="container">
-            <!-- <p class="landing-hero-badge text-center">{{ t('home.heroBadge') }}</p> -->
+            <div class="hero-masthead">
+              <span class="hero-masthead-name">{{ t('home.heroMasthead') }}</span>
+              <span class="hero-masthead-line"></span>
+              <span class="hero-masthead-issue">{{ t('home.heroIssue') }}</span>
+            </div>
             <div class="title-brand">
               <h1 class="presentation-title">
-                TRIPSTAR
+                TripStellar
               </h1>
             </div>
             <h2 class="presentation-subtitle text-center">{{ t('home.titleLine') }}</h2>
+            <p class="hero-footnote">{{ t('home.heroFootnote') }}</p>
+            <button type="button" class="hero-scroll" @click="scrollToForm">
+              <span>{{ t('home.heroScroll') }}</span>
+              <span class="hero-scroll-line" aria-hidden="true"></span>
+            </button>
           </div>
         </div>
         <div class="moving-clouds" :style="movingCloudsStyle"></div>
@@ -290,7 +314,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { message } from 'ant-design-vue'
@@ -299,7 +323,6 @@ import { getCurrentLocale } from '@/i18n'
 import NavBar from '@/components/NavBar.vue'
 import type { TripFormData, TripTaskEvent, TripHistoryItem, CityStay } from '@/types'
 import type { Dayjs } from 'dayjs'
-import dayjs from 'dayjs'
 
 type LandingFormData = {
   cities: Array<{ city: string; days: number }>
@@ -377,28 +400,28 @@ const removeCity = (index: number) => {
 
 const heroProgress = computed(() => Math.min(scrollY.value / 320, 1))
 const toneProgress = computed(() => Math.min(Math.max((scrollY.value - 20) / 360, 0), 1))
-const pageHeaderStyle = computed(() => ({
-  backgroundImage: "url('http://demos.creative-tim.com/paper-kit-2/assets/img/antoine-barres.jpg')",
-  backgroundPosition: `center ${Math.max(-scrollY.value * 0.08, -120)}px`,
-  backgroundSize: 'cover',
-  backgroundRepeat: 'no-repeat',
+/* 视频层的视差：铺满并放大 1.14 倍留出位移余量，滚动时缓慢上移 */
+const heroMediaStyle = computed(() => ({
+  transform: `translate3d(0, ${Math.max(-scrollY.value * 0.08, -120)}px, 0) scale(1.14)`,
 }))
+/* 星轨视频上不再叠白色云雾，否则会把星空糊成灰白 */
 const movingCloudsStyle = computed(() => ({
   backgroundImage: "url('https://demos.creative-tim.com/paper-kit-2/assets/img/clouds.png')",
-  opacity: fogEnabled.value ? '0.55' : '0',
+  opacity: '0',
 }))
 const fogLowStyle = computed(() => ({
-  opacity: fogEnabled.value ? '0.82' : '0',
+  opacity: '0',
 }))
 const fogLowRightStyle = computed(() => ({
-  opacity: fogEnabled.value ? '0.72' : '0',
+  opacity: '0',
 }))
 const heroContentStyle = computed(() => ({
   opacity: `${1 - heroProgress.value * 0.95}`,
   transform: `translate3d(0, ${-heroProgress.value * 46}px, 0)`,
 }))
 const heroBottomShadeStyle = computed(() => ({
-  opacity: `${(0.48 + toneProgress.value * 0.44) * (fogEnabled.value ? 1 : 0)}`,
+  /* 底部纸色渐隐压到很低，避免把地平线的暖光洗掉；滚动时再逐步加强 */
+  opacity: `${(0.1 + toneProgress.value * 0.66) * (fogEnabled.value ? 1 : 0)}`,
 }))
 const lowerShadeStyle = computed(() => ({
   opacity: `${(0.34 + toneProgress.value * 0.52) * (fogEnabled.value ? 1 : 0)}`,
@@ -454,13 +477,208 @@ const loadHistoryPlans = async () => {
   }
 }
 
+/* ===== 星轨极点自转 =====
+   为什么不直接旋转照片：这张图的星轨极点在原图约 (63%, 44%) 处，偏离画面中心。
+   绕它转满一圈，图片必须放大到 2.16 倍才能保证四个角始终被覆盖，
+   而原图只有 1555px 宽，放大到这个程度会明显发虚。
+   所以改成在照片之上叠一层程序生成的星点，让它们沿各自的同心圆轨道绕极点运行——
+   轨道与照片里已有的星轨同心，视觉上就是"星轨在实时生长"。 */
+const starCanvasRef = ref<HTMLCanvasElement | null>(null)
+/** 星轨汇聚的极点，坐标是原图内的相对位置 */
+const STAR_POLE = { x: 0.63, y: 0.44 }
+const HERO_IMAGE_W = 1555
+const HERO_IMAGE_H = 1012
+/** 绕极点转一整圈所需的秒数，越大越慢 */
+const STAR_SPIN_SECONDS = 240
+/** 目标帧率：自转很慢，30 帧足够，省一半开销 */
+const STAR_FPS = 30
+/** 原图中的地平线高度（相对位置）：再往下是树与地面，不落星点 */
+const STAR_HORIZON = 0.86
+/** 地平线前的渐隐起点，避免星点在树梢处硬闪 */
+const STAR_HORIZON_FADE = 0.8
+
+type OrbitStar = {
+  radius: number
+  phase: number
+  size: number
+  glow: number
+  /** 闪烁角速度：让星点有明暗呼吸，肉眼立刻能看出这层是活的 */
+  twinkleSpeed: number
+}
+
+let orbitStars: OrbitStar[] = []
+let starSprite: HTMLCanvasElement | null = null
+let starRafId = 0
+let starElapsed = 0
+let starLastFrameTs = 0
+let starLastTickTs = 0
+
+/** 背景图在元素内的映射，换算规则与 background-size: cover / background-position: center bottom 完全一致 */
+const heroImageMapping = (w: number, h: number) => {
+  const scale = Math.max(w / HERO_IMAGE_W, h / HERO_IMAGE_H)
+  const renderedW = HERO_IMAGE_W * scale
+  const renderedH = HERO_IMAGE_H * scale
+  return {
+    renderedW,
+    renderedH,
+    offsetX: (w - renderedW) / 2, // background-position: center
+    offsetY: h - renderedH, // background-position: bottom
+  }
+}
+
+/** 原图坐标下的极点 → 元素内 CSS 像素 */
+const poleInHost = (w: number, h: number) => {
+  const map = heroImageMapping(w, h)
+  return {
+    x: map.offsetX + STAR_POLE.x * map.renderedW,
+    y: map.offsetY + STAR_POLE.y * map.renderedH,
+  }
+}
+
+/** 预渲染单颗星的光晕贴图：比每帧为每颗星新建径向渐变快得多 */
+const buildStarSprite = () => {
+  const size = 32
+  const sprite = document.createElement('canvas')
+  sprite.width = size
+  sprite.height = size
+  const ctx = sprite.getContext('2d')
+  if (!ctx) return null
+  const r = size / 2
+  const gradient = ctx.createRadialGradient(r, r, 0, r, r, r)
+  // 亮核收得很紧、外圈衰减很快，读起来是"一颗星"而不是一团光斑
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)')
+  gradient.addColorStop(0.12, 'rgba(255, 255, 255, 0.88)')
+  gradient.addColorStop(0.3, 'rgba(212, 232, 255, 0.32)')
+  gradient.addColorStop(0.62, 'rgba(160, 195, 255, 0.07)')
+  gradient.addColorStop(1, 'rgba(140, 180, 255, 0)')
+  ctx.fillStyle = gradient
+  ctx.beginPath()
+  ctx.arc(r, r, r, 0, Math.PI * 2)
+  ctx.fill()
+  return sprite
+}
+
+/** 撒点：半径取平方根分布，保证单位面积上的星数均匀，不会全挤在极点附近 */
+const seedOrbitStars = (maxRadius: number) => {
+  // 星点只做点缀，密度压到原来的三分之一左右
+  const count = Math.round(Math.min(Math.max(maxRadius * 0.08, 60), 130))
+  orbitStars = Array.from({ length: count }, () => ({
+    radius: maxRadius * (0.07 + Math.sqrt(Math.random()) * 0.93),
+    phase: Math.random() * Math.PI * 2,
+    size: 1.2 + Math.random() * 1.4,
+    glow: 0.5 + Math.random() * 0.5,
+    twinkleSpeed: 0.5 + Math.random() * 1.4,
+  }))
+}
+
+const renderOrbitStars = () => {
+  const canvas = starCanvasRef.value
+  const ctx = canvas?.getContext('2d')
+  if (!canvas || !ctx) return
+
+  const w = canvas.offsetWidth
+  const h = canvas.offsetHeight
+  if (!w || !h) return
+
+  // 尺寸变化（含设备像素比变化）时重建画布并重新撒点
+  const dpr = Math.min(window.devicePixelRatio || 1, 2)
+  const pixelW = Math.round(w * dpr)
+  const pixelH = Math.round(h * dpr)
+  if (canvas.width !== pixelW || canvas.height !== pixelH) {
+    canvas.width = pixelW
+    canvas.height = pixelH
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    orbitStars = []
+  }
+
+  const map = heroImageMapping(w, h)
+  const pole = poleInHost(w, h)
+  if (orbitStars.length === 0) {
+    seedOrbitStars(
+      Math.max(
+        Math.hypot(pole.x, pole.y),
+        Math.hypot(w - pole.x, pole.y),
+        Math.hypot(pole.x, h - pole.y),
+        Math.hypot(w - pole.x, h - pole.y)
+      )
+    )
+  }
+
+  if (!starSprite) starSprite = buildStarSprite()
+  const sprite = starSprite
+  if (!sprite) return
+
+  const omega = (Math.PI * 2) / STAR_SPIN_SECONDS
+
+  ctx.clearRect(0, 0, w, h)
+  // 叠加混合：星点重叠处自然变亮
+  ctx.globalCompositeOperation = 'lighter'
+  for (const star of orbitStars) {
+    const angle = star.phase + omega * starElapsed
+    const x = pole.x + star.radius * Math.cos(angle)
+    const y = pole.y + star.radius * Math.sin(angle)
+    if (x < -24 || y < -24 || x > w + 24 || y > h + 24) continue
+
+    // 折算回原图坐标做地平线裁剪：树与地面不落星点，临界处渐隐
+    const imageY = (y - map.offsetY) / map.renderedH
+    if (imageY >= STAR_HORIZON) continue
+    const fade =
+      imageY <= STAR_HORIZON_FADE
+        ? 1
+        : 1 - (imageY - STAR_HORIZON_FADE) / (STAR_HORIZON - STAR_HORIZON_FADE)
+
+    // 闪烁：0.62~1.0 之间呼吸，让「这层在动」一眼可见
+    const twinkle = 0.81 + 0.19 * Math.sin(starElapsed * star.twinkleSpeed * 2 + star.phase * 3)
+
+    const half = star.size * 3
+    ctx.globalAlpha = star.glow * fade * twinkle
+    ctx.drawImage(sprite, x - half, y - half, half * 2, half * 2)
+  }
+  ctx.globalAlpha = 1
+  ctx.globalCompositeOperation = 'source-over'
+}
+
+const starTick = (now: number) => {
+  starRafId = window.requestAnimationFrame(starTick)
+  // hero 滚出视口后完全停算，回到视口内再接着走（不会跳帧）
+  if (scrollY.value > window.innerHeight) {
+    starLastTickTs = now
+    starLastFrameTs = now
+    return
+  }
+  if (now - starLastTickTs < 1000 / STAR_FPS) return
+  starElapsed += starLastFrameTs ? (now - starLastFrameTs) / 1000 : 0
+  starLastFrameTs = now
+  starLastTickTs = now
+  renderOrbitStars()
+}
+
+const startOrbitStars = () => {
+  if (!starCanvasRef.value || starRafId) return
+  // 注：这里不再因 prefers-reduced-motion 而冻结。
+  // 之前命中该设置时只画一帧静止画面，静止的星点和照片自带的亮点没有区别，
+  // 会被当成"没有效果"。效果本身是本页的明确需求，所以始终运行动画。
+  starLastFrameTs = 0
+  starLastTickTs = 0
+  starRafId = window.requestAnimationFrame(starTick)
+}
+
+const stopOrbitStars = () => {
+  if (starRafId) {
+    window.cancelAnimationFrame(starRafId)
+    starRafId = 0
+  }
+}
+
 onMounted(() => {
   onScroll()
   window.addEventListener('scroll', onScroll, { passive: true })
   void loadHistoryPlans()
+  startOrbitStars()
 })
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
+  stopOrbitStars()
 })
 
 const handleSubmit = async () => {
@@ -565,8 +783,8 @@ const handleSubmit = async () => {
 <style scoped>
 .landing-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #0d171d 0%, #142430 58%, #0f1a22 100%);
-  color: #ecf3fa;
+  background: var(--ts-paper);
+  color: var(--ts-ink-2);
   position: relative;
   isolation: isolate;
   overflow-x: hidden; /* 防止水平溢出导致的出界感 */
@@ -577,7 +795,7 @@ const handleSubmit = async () => {
   inset: 0% 0 -1px 0;
   z-index: 0;
   pointer-events: none;
-  background: rgba(6, 14, 20, 0.7);
+  background: rgba(236, 236, 233, 0.6);
   transition: opacity 0.18s linear;
 }
 
@@ -588,7 +806,7 @@ const handleSubmit = async () => {
   right: 0;
   top: -28px;
   height: 28px;
-  background: linear-gradient(to bottom, rgba(6, 14, 20, 0), rgba(6, 14, 20, 0.92));
+  background: linear-gradient(to bottom, rgba(236, 236, 233, 0), rgba(236, 236, 233, 0.94));
 }
 
 .landing-header {
@@ -597,87 +815,280 @@ const handleSubmit = async () => {
   min-height: 100vh;
   position: relative;
   display: block;
-  background-size: cover !important;
-  background-repeat: no-repeat !important;
-  background-position: center center !important;
+  /* 夜空兜底色：视频未加载/被拦截时，浅色文字仍然可读 */
+  background-color: #0b1020;
+  background-image: none !important;
   overflow: hidden;
   z-index: 1;
+  /* 浅色文字压在星空上时的深色底晕，保证小字可读。
+     背景由浅色照片改为夜空视频后，光晕方向也从纸色翻成墨色 */
+  --hero-halo: 0 0 10px rgba(6, 8, 14, 0.9), 0 0 28px rgba(6, 8, 14, 0.62);
+}
+
+/* 背景层：外层负责滚动视差（transform 由 computed 注入），
+   内层负责常驻的缓慢推镜——拆成两层，两个 transform 才不会互相覆盖 */
+.hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.hero-media-img {
+  position: absolute;
+  /* 不再向外扩，让 cover 以最小放大倍数呈现，尽量多露出画面内容 */
+  inset: 0;
+  background-image: url('/images/hero-night-sky.jpg');
+  background-size: cover;
+  /* 底部对齐：地平线与树的剪影永远落在画面底边，裁掉的只是上方空白夜空 */
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  /* 夜空略提亮避免死黑，略降对比压住高感噪点 */
+  filter: brightness(1.12) contrast(0.96);
+  /* 以底边为原点，推镜时地平线不动，只有天空在呼吸 */
+  transform-origin: center bottom;
+  animation: hero-drift 38s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+/* 极慢的推近，幅度压到 6%，只做"呼吸"不做"放大" */
+@keyframes hero-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+/* 星点层：画在与背景图同一个元素里，所以推镜时星点和星轨始终保持对齐 */
+.hero-stars {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* 流星：偶尔划过，给星空一点"活着"的感觉 */
+.hero-meteor {
+  position: absolute;
+  top: 10%;
+  left: 16%;
+  z-index: 2;
+  width: 190px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.95) 100%);
+  box-shadow: 0 0 10px rgba(170, 210, 255, 0.8);
+  opacity: 0;
+  pointer-events: none;
+  /* 以尾端为原点旋转，飞行方向与倾斜角一致 */
+  transform-origin: right center;
+  animation: meteor-fall 17s linear infinite;
+}
+
+.hero-meteor-2 {
+  top: 26%;
+  left: 56%;
+  width: 130px;
+  animation-delay: 9.5s;
+  animation-duration: 23s;
+}
+
+@keyframes meteor-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(31deg) scaleX(0.25);
+  }
+  2% {
+    opacity: 1;
+    transform: translate3d(70px, 42px, 0) rotate(31deg) scaleX(1);
+  }
+  7% {
+    opacity: 0;
+    transform: translate3d(560px, 336px, 0) rotate(31deg) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(560px, 336px, 0) rotate(31deg) scaleX(1);
+  }
+}
+
+/* 蒙版层：① 四边暗角（把星空压成背景，视线收拢到画面中心的星轨）
+            ② 文字行再压一层深色，托住浅色的刊头与标题 */
+.hero-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      62% 80% at 50% 48%,
+      rgba(6, 8, 14, 0) 0%,
+      rgba(6, 8, 14, 0.16) 44%,
+      rgba(6, 8, 14, 0.4) 72%,
+      rgba(6, 8, 14, 0.76) 100%
+    ),
+    radial-gradient(
+      58% 34% at 50% 44%,
+      rgba(6, 8, 14, 0.5) 0%,
+      rgba(6, 8, 14, 0.22) 58%,
+      rgba(6, 8, 14, 0) 100%
+    );
+}
+
+/* 刊物细线框：夜空底上改用浅线，multiply 在暗底会直接消失 */
+.hero-frame {
+  position: absolute;
+  inset: 88px 28px 28px;
+  z-index: 2;
+  pointer-events: none;
+  border: 1px solid rgba(250, 248, 244, 0.2);
+}
+
+/* 竖排刊头 */
+.hero-rail {
+  position: absolute;
+  z-index: 4;
+  left: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  pointer-events: none;
+}
+
+.hero-rail-text {
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.44em;
+  text-transform: uppercase;
+  color: rgba(250, 248, 244, 0.86);
+  /* 竖排刊头落在画面左侧暗角上，同样给一层深色光晕 */
+  text-shadow: var(--hero-halo);
+  /* 起首加一个朱砂小方点，像杂志页码的标记 */
+  border-top: 6px solid var(--ts-accent);
+  padding-top: 12px;
+}
+
+.landing-header .filter {
+  z-index: 2;
+}
+
+.landing-header .filter::after {
+  background: linear-gradient(
+    180deg,
+    rgba(6, 8, 14, 0.3) 0%,
+    rgba(6, 8, 14, 0) 42%,
+    rgba(6, 8, 14, 0.18) 100%
+  ) !important;
 }
 
 .history-section {
   position: relative;
   z-index: 1;
-  padding: 0 24px 72px;
+  padding: 0 24px 96px;
 }
 
+/* 杂志目录式：无卡片、无阴影，仅靠发丝线与编号分栏 */
 .history-panel {
-  max-width: 1120px;
+  max-width: var(--ts-measure);
   margin: 0 auto;
-  background: rgba(10, 20, 28, 0.74);
-  border: 1px solid rgba(203, 227, 255, 0.12);
-  border-radius: 28px;
-  padding: 24px;
-  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(14px);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--ts-rule-strong);
+  border-radius: 0;
+  padding: 32px 0 0;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .history-head {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .history-eyebrow {
-  margin: 0 0 6px;
-  color: rgba(203, 227, 255, 0.62);
-  font-size: 12px;
-  letter-spacing: 0.14em;
+  margin: 0 0 8px;
+  color: var(--ts-ink-3);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ts-tracking-caps);
   text-transform: uppercase;
 }
 
 .history-title {
   margin: 0;
-  color: #f5fbff;
-  font-size: 24px;
+  color: var(--ts-ink);
+  font-family: var(--ts-font-serif);
+  font-size: 30px;
   font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 .history-refresh {
   padding-inline: 0;
+  font-family: var(--ts-font-mono) !important;
+  font-size: 11px !important;
+  letter-spacing: var(--ts-tracking-caps);
+  text-transform: uppercase;
 }
 
 .history-loading {
-  color: rgba(236, 243, 250, 0.78);
-  padding: 12px 4px;
+  color: var(--ts-ink-3);
+  padding: 16px 0;
 }
 
 .history-list {
-  display: grid;
-  gap: 14px;
+  display: block;
+  counter-reset: ts-index;
 }
 
 .history-item {
   width: 100%;
-  border: 1px solid rgba(203, 227, 255, 0.12);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.04);
+  border: 0;
+  border-top: 1px solid var(--ts-rule);
+  border-radius: 0;
+  background: transparent;
   color: inherit;
-  padding: 18px 20px;
+  padding: 20px 8px 20px 0;
   text-align: left;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
+  align-items: flex-start;
+  gap: 20px;
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition: background 0.25s var(--ts-ease), padding 0.25s var(--ts-ease);
+}
+
+.history-item::before {
+  counter-increment: ts-index;
+  content: counter(ts-index, decimal-leading-zero);
+  flex: none;
+  width: 30px;
+  padding-top: 6px;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--ts-ink-4);
+  transition: color 0.25s var(--ts-ease);
 }
 
 .history-item:hover {
-  transform: translateY(-1px);
-  border-color: rgba(138, 196, 255, 0.28);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--ts-paper-2);
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.history-item:hover::before {
+  color: var(--ts-accent);
 }
 
 .history-item-main {
@@ -689,42 +1100,66 @@ const handleSubmit = async () => {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 10px;
+  gap: 12px;
 }
 
 .history-city {
-  color: #f7fbff;
-  font-size: 20px;
+  color: var(--ts-ink);
+  font-family: var(--ts-font-serif);
+  font-size: 21px;
   font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .history-date {
-  color: rgba(236, 243, 250, 0.75);
-  font-size: 14px;
+  color: var(--ts-ink-3);
+  font-family: var(--ts-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
 }
 
 .history-meta {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  color: rgba(203, 227, 255, 0.64);
-  font-size: 13px;
+  gap: 14px;
+  color: var(--ts-ink-4);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .history-summary {
-  margin: 10px 0 0;
-  color: rgba(236, 243, 250, 0.9);
+  margin: 12px 0 0;
+  color: var(--ts-ink-2);
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.75;
+  max-width: 62ch;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .history-open {
   flex: none;
-  color: #8ac4ff;
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--ts-ink-3);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: var(--ts-tracking-caps);
+  text-transform: uppercase;
   white-space: nowrap;
+  padding-top: 6px;
+  border-bottom: 1px solid transparent;
+  transition: color 0.25s var(--ts-ease), border-color 0.25s var(--ts-ease);
+}
+
+.history-item:hover .history-open {
+  color: var(--ts-accent);
+  border-bottom-color: var(--ts-accent-line);
 }
 
 .landing-header .content-center {
@@ -740,7 +1175,8 @@ const handleSubmit = async () => {
 }
 
 .landing-header .content-center .container {
-  transform: translate3d(0, 45px, 0);
+  transform: translate3d(0, 24px, 0);
+  max-width: 760px;
 }
 
 /* moving-clouds: 依赖 global.css 的定位 (bottom:0, width:250em, cloudLoop 80s) */
@@ -755,104 +1191,210 @@ const handleSubmit = async () => {
   pointer-events: none;
   z-index: 2;
   transition: opacity 0.2s ease;
+  opacity: 0.38;
   /* margin-bottom: -35px; */
+}
+
+.fog-low.right {
+  opacity: 0.5;
 }
 
 /* fog-low.right: 依赖 global.css 的 margin-left:30%; opacity:1 */
 
-.landing-hero-badge {
-  margin: 0 0 18px;
-  font-size: 12px;
-  letter-spacing: 0.16em;
+/* ---- Hero 刊头排版 ---- */
+
+.hero-masthead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: fit-content;
+  margin: 0 auto 30px;
+  padding-bottom: 16px;
+  /* 与内容等宽的发丝线，做出杂志刊头的压线框感 */
+  border-bottom: 1px solid rgba(250, 248, 244, 0.24);
+}
+
+.hero-masthead-name,
+.hero-masthead-issue {
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: var(--ts-tracking-caps);
   text-transform: uppercase;
-  color: rgba(236, 243, 250, 0.78);
+  color: rgba(250, 248, 244, 0.88);
+  text-shadow: var(--hero-halo);
+  white-space: nowrap;
+}
+
+.hero-masthead-line {
+  width: 56px;
+  height: 1px;
+  background: rgba(250, 248, 244, 0.42);
+  box-shadow: 0 0 8px rgba(6, 8, 14, 0.8);
+}
+
+.landing-header .title-brand {
+  max-width: none;
+  color: var(--ts-paper);
 }
 
 .landing-header .presentation-title {
-  font-size: clamp(44px, 7vw, 90px);
-  font-weight: 800;
+  font-family: var(--ts-font-serif);
+  font-size: clamp(48px, 8.4vw, 128px);
+  font-weight: 700;
+  font-style: normal;
+  line-height: 0.98;
+  letter-spacing: -0.015em;
+  color: #f7f5f0;
+  background: none;
+  background-image: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-fill-color: currentColor;
+  /* 大标题只加一层极淡的深色晕，避免糊边，同时让字口从星空里浮起来 */
+  text-shadow: 0 0 34px rgba(6, 8, 14, 0.6);
 }
 
 .landing-header .presentation-subtitle {
   max-width: 620px;
-  /* margin: 22px auto 0; */
-  color: rgba(224, 233, 242, 0.78);
-  font-size: clamp(15px, 1.8vw, 19px);
-  line-height: 1.75;
-  /* font-weight: 500; */
+  margin-top: 22px;
+  color: rgba(250, 248, 244, 0.88);
+  font-family: var(--ts-font-sans);
+  font-size: clamp(14px, 1.6vw, 17px);
+  font-weight: 500;
+  line-height: 1.85;
+  letter-spacing: 0.06em;
   justify-self: center;
+  text-shadow: var(--hero-halo);
+}
+
+.hero-footnote {
+  margin: 26px 0 0;
+  text-align: center;
+  color: rgba(250, 248, 244, 0.8);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-shadow: var(--hero-halo);
+}
+
+.hero-scroll {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 44px auto 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: rgba(250, 248, 244, 0.86);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: var(--ts-tracking-caps);
+  text-transform: uppercase;
+  text-shadow: var(--hero-halo);
+  transition: color 0.3s var(--ts-ease);
+}
+
+.hero-scroll:hover {
+  color: #ffb347;
+}
+
+.hero-scroll-line {
+  display: block;
+  width: 1px;
+  box-shadow: 0 0 10px rgba(6, 8, 14, 0.85);
+  height: 34px;
+  background: currentColor;
+  opacity: 0.5;
+  transition: transform 0.4s var(--ts-ease), opacity 0.4s var(--ts-ease);
+}
+
+.hero-scroll:hover .hero-scroll-line {
+  transform: scaleY(1.35);
+  opacity: 1;
 }
 
 .hero-bottom-shade {
   position: absolute;
   inset: auto 0 0 0;
-  height: 56%;
+  height: 42%;
   z-index: 1;
   pointer-events: none;
+  /* 夜空 → 下面浅色纸张的过渡：底部留一层微亮的地平线雾，避免生硬切断 */
   background: linear-gradient(
     to top,
-    rgba(6, 14, 20, 0.92) 0%,
-    rgba(6, 14, 20, 0.66) 46%,
-    rgba(6, 14, 20, 0) 100%
+    rgba(236, 236, 233, 0.92) 0%,
+    rgba(236, 236, 233, 0.32) 46%,
+    rgba(236, 236, 233, 0) 100%
   );
   transition: opacity 0.18s linear;
 }
 
 
 .form-section {
-  margin-top: -112px;
-  padding: 0 20px 86px;
+  margin-top: -96px;
+  padding: 0 20px 96px;
   position: relative;
   z-index: 3;
 }
 
 .form-panel {
-  max-width: 1000px;
+  max-width: 900px;
   margin: 0 auto;
-  border: 1.2px solid rgba(236, 243, 250, 0.2);
-  border-radius: 22px;
-  background: rgba(12, 23, 32, 0.56);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 24px 80px rgba(4, 11, 18, 0.52);
-  padding: 20px;
-  transition: 0.25s;
+  border: 1px solid var(--ts-rule);
+  border-top: 2px solid var(--ts-ink);
+  border-radius: 0;
+  background: var(--ts-card);
+  backdrop-filter: none;
+  box-shadow: var(--ts-shadow);
+  padding: 36px 40px 32px;
+  transition: 0.25s var(--ts-ease);
 }
 
 .step {
-  margin-bottom: 8px;
+  margin-bottom: 36px;
 }
 
+/* 编号索引 + 衬线栏目标题 + 发丝分隔线 */
 .step-head {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ts-rule);
 }
 
 .step-head span {
-  width: 26px;
-  height: 23px;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(215, 110, 66, 0.2);
-  border: 1.2px solid rgba(215, 110, 66, 0.4);
-  color: rgba(253, 225, 211, 0.95);
-  font-size: 12px;
-  font-weight: 700;
+  flex: none;
+  color: var(--ts-accent);
+  font-family: var(--ts-font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  transform: translateY(-2px);
 }
 
 .step-head h3 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: rgba(240, 246, 252, 0.94);
+  font-family: var(--ts-font-serif);
+  font-size: 23px;
+  font-weight: 700;
+  color: var(--ts-ink);
+  line-height: 1.3;
+  letter-spacing: -0.005em;
 }
 
 .grid {
   display: grid;
-  gap: 12px;
+  gap: 4px 24px;
 }
 
 .grid4 {
@@ -861,7 +1403,7 @@ const handleSubmit = async () => {
 
 .grid-date {
   grid-template-columns: 1fr 0.6fr;
-  margin-top: 12px;
+  margin-top: 4px;
 }
 
 .grid2 {
@@ -871,14 +1413,14 @@ const handleSubmit = async () => {
 .city-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 4px;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
 .city-row {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: 12px;
 }
 
 .city-row-name {
@@ -896,49 +1438,58 @@ const handleSubmit = async () => {
   width: 36px;
   height: 40px;
   margin-bottom: 0;
-  border: 1.2px solid rgba(236, 243, 250, 0.2);
-  border-radius: 10px;
-  background: rgba(14, 27, 38, 0.66);
-  color: rgba(236, 243, 250, 0.6);
-  font-size: 18px;
+  border: 1px solid var(--ts-rule-strong);
+  border-radius: var(--ts-r-sm);
+  background: transparent;
+  color: var(--ts-ink-3);
+  font-size: 16px;
+  line-height: 1;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 0.25s var(--ts-ease), color 0.25s var(--ts-ease),
+    background 0.25s var(--ts-ease);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .city-remove-btn:hover {
-  border-color: rgba(255, 100, 100, 0.6);
-  color: #ff6464;
-  background: rgba(255, 100, 100, 0.1);
+  border-color: var(--ts-danger);
+  color: var(--ts-danger);
+  background: rgba(166, 58, 43, 0.05);
 }
 
 .city-add-btn {
   align-self: flex-start;
-  padding: 6px 16px;
-  border: 1.2px dashed rgba(215, 110, 66, 0.5);
-  border-radius: 10px;
+  margin-top: 6px;
+  padding: 8px 16px;
+  border: 1px dashed var(--ts-rule-strong);
+  border-radius: var(--ts-r-sm);
   background: transparent;
-  color: rgba(215, 110, 66, 0.85);
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--ts-ink-2);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: var(--ts-tracking-caps);
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 0.25s var(--ts-ease), color 0.25s var(--ts-ease),
+    background 0.25s var(--ts-ease);
 }
 
 .city-add-btn:hover {
-  border-color: rgba(215, 110, 66, 0.9);
-  background: rgba(215, 110, 66, 0.1);
-  color: #d76e42;
+  border-color: var(--ts-accent);
+  border-style: solid;
+  background: var(--ts-accent-soft);
+  color: var(--ts-accent);
 }
 
 .field-label {
+  font-family: var(--ts-font-mono);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: var(--ts-tracking-caps);
   text-transform: uppercase;
-  color: rgba(228, 236, 245, 0.72);
+  color: var(--ts-ink-3);
 }
 
 .field-input.ant-input,
@@ -951,12 +1502,15 @@ const handleSubmit = async () => {
 .field-textarea :deep(.ant-input),
 .field-textarea.ant-input,
 .special-textarea.ant-input {
-  border: 1.2px solid rgba(236, 243, 250, 0.2) !important;
-  border-radius: 12px !important;
-  background: rgba(14, 27, 38, 0.66) !important;
-  background-color: rgba(14, 27, 38, 0.66) !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ts-rule-strong) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
   background-image: none !important;
-  color: #ecf3fa !important;
+  color: var(--ts-ink) !important;
+  box-shadow: none !important;
+  transition: border-color 0.25s var(--ts-ease);
 }
 
 /* 浏览器自动填充（Autofill）背景色修复 */
@@ -967,21 +1521,21 @@ const handleSubmit = async () => {
 :deep(.field-input .ant-picker-input > input:-webkit-autofill),
 :deep(.field-textarea textarea:-webkit-autofill),
 :deep(.special-textarea:-webkit-autofill) {
-  -webkit-box-shadow: 0 0 0 1000px #0e1b26 inset !important;
-  -webkit-text-fill-color: #ecf3fa !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--ts-card) inset !important;
+  -webkit-text-fill-color: var(--ts-ink) !important;
   transition: background-color 5000s ease-in-out 0s !important;
 }
 
 .field-input.ant-input-number :deep(.ant-input-number-input),
 .field-input.ant-input-number :deep(.ant-input-number-handler-wrap) {
-  color: #ecf3fa !important;
+  color: var(--ts-ink) !important;
 }
 
 .field-input.ant-input::placeholder,
 :deep(.field-input .ant-picker-input > input::placeholder),
 .field-textarea :deep(textarea::placeholder),
 .field-textarea.ant-input::placeholder {
-  color: rgba(228, 236, 245, 0.4) !important;
+  color: var(--ts-ink-4) !important;
 }
 
 .field-input.ant-input:hover,
@@ -989,17 +1543,22 @@ const handleSubmit = async () => {
 .field-select:hover :deep(.ant-select-selector),
 .field-textarea :deep(textarea:hover),
 .field-textarea.ant-input:hover {
-  border-color: rgba(236, 243, 250, 0.42) !important;
+  border-bottom-color: var(--ts-ink-3) !important;
 }
 
 .field-input.ant-input:focus,
 .field-input.ant-picker-focused,
 .field-textarea :deep(textarea:focus),
 .field-textarea.ant-input:focus {
-  border-color: rgba(215, 110, 66, 0.88) !important;
-  box-shadow: 0 0 0 3px rgba(215, 110, 66, 0.2) !important;
-  background: rgba(14, 27, 38, 0.66) !important;
+  border-bottom-color: var(--ts-accent) !important;
+  box-shadow: none !important;
+  background: transparent !important;
   outline: none !important;
+}
+
+.field-select:focus-within :deep(.ant-select-selector),
+.field-select.ant-select-focused :deep(.ant-select-selector) {
+  border-bottom-color: var(--ts-accent) !important;
 }
 
 :deep(.field-input .ant-picker-input > input),
@@ -1007,33 +1566,36 @@ const handleSubmit = async () => {
 :deep(.field-input .ant-picker-suffix),
 :deep(.field-input .ant-picker-clear),
 .field-select :deep(.ant-select-arrow) {
-  color: #ecf3fa !important;
+  color: var(--ts-ink) !important;
 }
 
 .days-chip {
   min-height: 40px;
-  border-radius: 12px;
-  border: 1.2px solid rgba(215, 110, 66, 0.42);
-  background: rgba(19, 34, 46, 0.8);
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid var(--ts-accent);
+  background: transparent;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
 }
 
 .days-number {
-  color: rgba(236, 243, 250, 0.72);
-  font-size: 18px;
+  color: var(--ts-ink);
+  font-family: var(--ts-font-serif);
+  font-size: 26px;
   line-height: 1;
   font-weight: 700;
 }
 
 .days-unit {
-  font-size: 16px;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(224, 233, 242, 0.74);
-  font-weight: 700;
+  letter-spacing: var(--ts-tracking-caps);
+  color: var(--ts-ink-3);
+  font-weight: 500;
 }
 
 .interest-grid {
@@ -1043,7 +1605,7 @@ const handleSubmit = async () => {
 .interest-group {
   display: grid !important;
   grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
+  gap: 10px;
   width: 100%;
 }
 
@@ -1052,58 +1614,72 @@ const handleSubmit = async () => {
 }
 
 .interest-pill {
-  min-height: 38px;
-  border-radius: 10px;
-  border: 1.2px solid rgba(236, 243, 250, 0.16);
-  background: rgba(15, 28, 38, 0.6);
-  color: rgba(232, 239, 247, 0.84);
+  min-height: 42px;
+  border-radius: 0;
+  border: 1px solid var(--ts-rule);
+  background: transparent;
+  color: var(--ts-ink-2);
   font-size: 12px;
+  letter-spacing: 0.02em;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   user-select: none;
-  transition: all 0.55s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: border-color 0.3s var(--ts-ease), color 0.3s var(--ts-ease),
+    background 0.3s var(--ts-ease);
 }
 
 .interest-pill:hover {
-  background: rgba(236, 243, 250, 0.08);
-  border-color: rgba(236, 243, 250, 0.3);
-  /* transform: translateY(-2px); */
-  box-shadow: 0 4px 12px rgba(4, 11, 18, 0.3);
+  background: var(--ts-paper-2);
+  border-color: var(--ts-rule-strong);
+  box-shadow: none;
 }
 
 .interest-pill:active {
-  transform: translateY(1px) scale(0.96);
-  box-shadow: 0 2px 4px rgba(4, 11, 18, 0.2);
+  transform: translateY(1px);
+  box-shadow: none;
 }
 
 .interest-pill.active {
-  border-color: rgba(215, 110, 66, 0.8);
-  background: rgba(215, 110, 66, 0.2);
+  border-color: var(--ts-accent);
+  background: var(--ts-accent-soft);
+  color: var(--ts-accent);
+  font-weight: 600;
 }
 
 .interest-pill.active:hover {
-  background: rgba(215, 110, 66, 0.28);
-  border-color: rgba(215, 110, 66, 1);
+  background: rgba(176, 67, 31, 0.16);
+  border-color: var(--ts-accent);
 }
 
 .submit-btn {
   width: 100%;
-  min-height: 48px;
-  border-radius: 12px;
-  /* border: 1px solid rgba(236, 243, 250, 0.28);
-  background: linear-gradient(135deg, #d76e42, #a14625);
-  color: #fff; */
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  min-height: 52px;
+  border-radius: 0;
+  background-color: var(--ts-accent) !important;
+  background-image: none !important;
+  border-color: var(--ts-accent) !important;
+  color: var(--ts-paper) !important;
+  box-shadow: none !important;
+  font-family: var(--ts-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: var(--ts-tracking-caps);
   text-transform: uppercase;
   cursor: pointer;
+  transition: background 0.25s var(--ts-ease);
+}
+
+.submit-btn:hover,
+.submit-btn:focus {
+  background-color: var(--ts-accent-deep) !important;
+  border-color: var(--ts-accent-deep) !important;
+  color: var(--ts-paper) !important;
 }
 
 .submit-btn.loading {
-  background: rgba(14, 27, 38, 0.66);
+  background: var(--ts-ink-4) !important;
   cursor: wait;
 }
 
@@ -1117,8 +1693,8 @@ const handleSubmit = async () => {
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  border: 2px solid rgba(236, 243, 250, 0.24);
-  border-top-color: #fff;
+  border: 2px solid rgba(250, 248, 244, 0.4);
+  border-top-color: var(--ts-paper);
   animation: spin 0.8s linear infinite;
 }
 
@@ -1126,8 +1702,8 @@ const handleSubmit = async () => {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 2.5px solid rgba(215, 110, 66, 0.24);
-  border-top-color: #d76e42;
+  border: 2.5px solid var(--ts-accent-line);
+  border-top-color: var(--ts-accent);
   animation: spin 0.8s linear infinite;
 }
 
@@ -1155,16 +1731,18 @@ const handleSubmit = async () => {
 }
 
 .stepper-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 8px;
-  letter-spacing: 0.05em;
+  font-family: var(--ts-font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ts-ink);
+  margin-bottom: 10px;
+  letter-spacing: var(--ts-tracking-caps);
+  text-transform: uppercase;
 }
 
 .stepper-subtitle {
-  font-size: 15px;
-  color: rgba(236, 243, 250, 0.54);
+  font-size: 14px;
+  color: var(--ts-ink-3);
 }
 
 .stepper-container {
@@ -1187,54 +1765,58 @@ const handleSubmit = async () => {
 .node-icon {
   width: 52px;
   height: 52px;
-  border-radius: 50%;
-  background: rgba(14, 27, 38, 0.8);
-  border: 1.5px solid rgba(236, 243, 250, 0.16);
+  border-radius: 0;
+  background: var(--ts-paper-2);
+  border: 1px solid var(--ts-rule);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
-  color: rgba(236, 243, 250, 0.4);
-  transition: all 0.35s ease;
+  margin-bottom: 14px;
+  color: var(--ts-ink-4);
+  transition: border-color 0.35s var(--ts-ease), background 0.35s var(--ts-ease),
+    color 0.35s var(--ts-ease);
 }
 
 .step-node.active .node-icon {
-  border-color: #d76e42;
-  background: rgba(215, 110, 66, 0.14);
-  color: #d76e42;
-  box-shadow: 0 0 16px rgba(215, 110, 66, 0.25);
+  border-color: var(--ts-accent);
+  background: var(--ts-accent-soft);
+  color: var(--ts-accent);
+  box-shadow: none;
 }
 
 .step-node.completed .node-icon {
-  background: #d76e42;
-  border-color: #d76e42;
-  color: #fff;
-  box-shadow: 0 0 12px rgba(215, 110, 66, 0.3);
+  background: var(--ts-ink);
+  border-color: var(--ts-ink);
+  color: var(--ts-paper);
+  box-shadow: none;
 }
 
 .node-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(236, 243, 250, 0.4);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ts-ink-4);
   text-align: center;
-  transition: color 0.35s ease;
-  line-height: 1.3;
+  transition: color 0.35s var(--ts-ease);
+  line-height: 1.5;
 }
 
 .step-node.active .node-text {
-  color: #d76e42;
+  color: var(--ts-accent);
 }
 
 .step-node.completed .node-text {
-  color: rgba(236, 243, 250, 0.85);
+  color: var(--ts-ink);
 }
 
 .step-divider {
   flex: 1;
-  height: 3px;
-  background: rgba(236, 243, 250, 0.08);
-  margin-top: 25px; /* (52px / 2) - 1.5px */
-  border-radius: 2px;
+  height: 1px;
+  background: var(--ts-rule);
+  margin-top: 26px;
+  border-radius: 0;
   position: relative;
   overflow: hidden;
 }
@@ -1243,8 +1825,8 @@ const handleSubmit = async () => {
   content: '';
   position: absolute;
   top: 0; left: 0; bottom: 0; width: 0%;
-  background: #d76e42;
-  transition: width 0.45s ease;
+  background: var(--ts-ink);
+  transition: width 0.45s var(--ts-ease);
 }
 
 .step-divider.completed::after {
@@ -1257,15 +1839,16 @@ const handleSubmit = async () => {
 }
 
 .stepper-footer h3 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #d76e42;
-  margin-bottom: 8px;
+  font-family: var(--ts-font-serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ts-ink);
+  margin-bottom: 10px;
 }
 
 .stepper-footer p {
   font-size: 14px;
-  color: rgba(236, 243, 250, 0.54);
+  color: var(--ts-ink-3);
 }
 
 :deep(.ant-form-item-label > label) {
@@ -1273,7 +1856,7 @@ const handleSubmit = async () => {
 }
 
 :deep(.ant-form-item-explain-error) {
-  color: #ff9478 !important;
+  color: var(--ts-danger) !important;
 }
 
 /* @keyframes cloudLoop {
@@ -1302,12 +1885,25 @@ const handleSubmit = async () => {
 }
 
 @media (max-width: 991px) {
+  .hero-frame {
+    inset: 76px 16px 16px;
+  }
+
+  .hero-rail {
+    display: none;
+  }
+
+  .hero-masthead {
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
   .form-section {
-    padding: 0 14px 72px;
+    padding: 0 14px 80px;
   }
 
   .form-panel {
-    padding: 22px 18px;
+    padding: 26px 20px 22px;
   }
 
   .grid4,
@@ -1315,24 +1911,66 @@ const handleSubmit = async () => {
   .grid-date {
     grid-template-columns: 1fr;
   }
+
+  .history-section {
+    padding: 0 16px 72px;
+  }
+
+  .history-title {
+    font-size: 26px;
+  }
+
+  .step-head h3 {
+    font-size: 20px;
+  }
 }
 
 @media (max-width: 520px) {
   .landing-header .presentation-title {
-    font-size: clamp(34px, 10vw, 52px);
+    font-size: clamp(38px, 13vw, 60px);
   }
 
   .landing-header .presentation-subtitle {
-    font-size: 14px;
+    font-size: 13px;
     padding: 0 10px;
+    line-height: 1.8;
   }
 
   .landing-header .content-center .container {
-    transform: translate3d(0, 16px, 0);
+    transform: translate3d(0, 12px, 0);
+  }
+
+  .hero-masthead-name {
+    display: none;
+  }
+
+  .hero-footnote {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+
+  .hero-scroll {
+    margin-top: 32px;
   }
 
   .interest-group {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .history-item {
+    gap: 12px;
+  }
+
+  .history-item::before {
+    width: 22px;
+  }
+
+  .history-city {
+    font-size: 18px;
+  }
+
+  .step-head {
+    gap: 12px;
   }
 }
 </style>

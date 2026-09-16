@@ -210,3 +210,36 @@ export interface TripChatResponse {
   success: boolean
   reply: string
 }
+
+// ============ 用户认证类型 ============
+
+export interface UserInfo {
+  id: number
+  username: string
+  email: string
+  nickname: string
+  avatar_url: string
+  created_at: string
+}
+
+export interface TokenPair {
+  access_token: string
+  refresh_token: string
+  token_type: string
+}
+
+export interface LoginPayload {
+  account: string
+  password: string
+}
+
+export interface RegisterPayload {
+  username: string
+  email: string
+  password: string
+}
+
+export interface UpdateProfilePayload {
+  nickname?: string
+  avatar_url?: string
+}

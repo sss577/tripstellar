@@ -2,6 +2,7 @@
 
 import os
 import json
+import secrets
 from pathlib import Path
 from typing import List, Dict, Any
 from pydantic import AliasChoices, Field
@@ -61,6 +62,12 @@ class Settings(BaseSettings):
     # 日志配置
     log_level: str = "INFO"
 
+    # 用户认证配置
+    secret_key: str = ""
+    database_url: str = "sqlite+aiosqlite:///./tripstar.db"
+    access_token_expire_hours: int = 2
+    refresh_token_expire_days: int = 14
+
     class Config:
         env_file = ".env"
         case_sensitive = False
@@ -71,8 +78,16 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(',')]
 
 
+def _ensure_secret_key() -> None:
+    """SECRET_KEY 未配置时自动生成随机值（仅开发态，重启后旧 token 失效）。"""
+    if not settings.secret_key:
+        settings.secret_key = secrets.token_urlsafe(48)
+        print("⚠️  SECRET_KEY 未配置，已自动生成随机值（重启后已签发的令牌将失效），生产环境请在 .env 固定配置")
+
+
 # 创建全局配置实例
 settings = Settings()
+_ensure_secret_key()
 _RUNTIME_SETTINGS_FILE = Path(__file__).resolve().parent.parent / "runtime_settings.json"
 _RUNTIME_SETTING_KEYS = {
     "vite_amap_web_key",
@@ -198,6 +213,8 @@ def print_config():
     print(f"Google Maps API Key: {'已配置' if settings.google_maps_api_key else '未配置'}")
     print(f"Google Maps Proxy: {settings.google_maps_proxy or '未配置'}")
     print(f"小红书Cookie: {'已配置' if settings.xhs_cookie else '未配置'}")
+    print(f"数据库: {settings.database_url}")
+    print(f"SECRET_KEY: {'已配置' if settings.secret_key else '未配置'}")
 
     # 检查LLM配置
     llm_api_key = settings.openai_api_key or os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")

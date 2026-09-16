@@ -74,7 +74,7 @@
           </div>
           <a-empty v-else :description="t('common.noData')" />
           <div class="overview-meta">
-            <span class="overview-meta-item" style="color: #ffd5c6; font-weight: 700;">
+            <span class="overview-meta-item" style="color: var(--ts-accent-deep); font-weight: 700;">
               {{ t('result.dateRange', { start: tripPlan.start_date, end: tripPlan.end_date }) }}
             </span>
             <span v-if="planId" class="overview-meta-item">
@@ -865,6 +865,7 @@ const initOverviewSwiper = async () => {
     effect: 'coverflow',
     grabCursor: true,
     centeredSlides: true,
+    speed: 400,
     coverflowEffect: {
       rotate: 0,
       stretch: 0,
@@ -1328,10 +1329,8 @@ const goToDayFromOverview = (dayArrayIndex: number) => {
 }
 
 const setActiveOverviewCard = (index: number) => {
+  // 悬停只更新选中态，不再触发轮播滑动，避免卡片从鼠标下移走导致 hover 丢失
   activeOverviewCard.value = index
-  if (overviewSwiper && overviewSwiper.activeIndex !== index) {
-    overviewSwiper.slideTo(index)
-  }
 }
 
 // 切换编辑模式
@@ -1829,7 +1828,7 @@ const getAttractionImage = (name: string, _index: number): string => {
   }
 
   // 返回一个统一的深色占位图
-  const bg = '#1a262f'
+  const bg = '#E9E4DB'
   const textColor = 'rgba(255,255,255,0.4)'
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
@@ -1845,7 +1844,7 @@ const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
   // 使用深色占位图
   const label = encodeURIComponent(t('result.imageLoadFailed'))
-  img.src = `data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect width="400" height="300" fill="%231a262f"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="rgba(255,255,255,0.4)"%3E${label}%3C/text%3E%3C/svg%3E`
+  img.src = `data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect width="400" height="300" fill="%23F3E2D3"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="rgba(62,50,41,0.35)"%3E${label}%3C/text%3E%3C/svg%3E`
 }
 
 
@@ -1878,7 +1877,7 @@ const buildExportHTML = (mapDataUrl: string = ''): string => {
       // 图片自适应：不压缩不裁剪，保持原始比例
       const imgTag = photoUrl
         ? `<img src="${photoUrl}" style="width:100%;height:auto;max-height:400px;object-fit:contain;border-radius:8px;margin-bottom:8px;" crossorigin="anonymous" />`
-        : `<div style="width:100%;height:80px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:bold;">${a.name}</div>`
+        : `<div style="width:100%;height:80px;background:linear-gradient(135deg,#B0431F,#8E3216);border-radius:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:bold;">${a.name}</div>`
       attractionsHTML += `
         <div style="flex:0 0 48%;background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,0.07);margin-bottom:14px;">
           ${imgTag}
@@ -1901,7 +1900,7 @@ const buildExportHTML = (mapDataUrl: string = ''): string => {
 
     daysHTML += `
       <div style="background:#ffffff;border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
-        <h3 style="margin:0 0 14px;color:#667eea;font-size:18px;">${t('result.export.dayTitle', { day: index + 1 })} <span style="font-size:14px;color:#888;margin-left:8px;">${day.date || ''}</span></h3>
+        <h3 style="margin:0 0 14px;color:#C4703F;font-size:18px;">${t('result.export.dayTitle', { day: index + 1 })} <span style="font-size:14px;color:#888;margin-left:8px;">${day.date || ''}</span></h3>
         <div style="display:flex;flex-wrap:wrap;gap:12px;">
           ${attractionsHTML}
         </div>
@@ -1915,7 +1914,7 @@ const buildExportHTML = (mapDataUrl: string = ''): string => {
     const b = tp.budget
     budgetHTML = `
       <div style="background:#ffffff;border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
-        <h3 style="margin:0 0 14px;color:#667eea;">${t('result.budget.title')}</h3>
+        <h3 style="margin:0 0 14px;color:#C4703F;">${t('result.budget.title')}</h3>
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
           <div style="flex:1;min-width:120px;background:#f5f7fa;padding:14px;border-radius:10px;text-align:center;">
             <div style="font-size:12px;color:#888;">${t('result.budget.attraction')}</div><div style="font-size:20px;font-weight:bold;color:#333;">¥${b.total_attractions || 0}</div>
@@ -1930,7 +1929,7 @@ const buildExportHTML = (mapDataUrl: string = ''): string => {
             <div style="font-size:12px;color:#888;">${t('result.budget.transport')}</div><div style="font-size:20px;font-weight:bold;color:#333;">¥${b.total_transportation || 0}</div>
           </div>
         </div>
-        <div style="background:#667eea;color:#fff;padding:16px 20px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="background:#C4703F;color:#fff;padding:16px 20px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:16px;">${t('result.budget.total')}</span>
           <span style="font-size:26px;font-weight:bold;">¥${b.total || 0}</span>
         </div>
@@ -1942,7 +1941,7 @@ const buildExportHTML = (mapDataUrl: string = ''): string => {
   if (mapDataUrl) {
     mapHTML = `
       <div style="background:#ffffff;border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
-        <h3 style="margin:0 0 14px;color:#667eea;">${t('result.side.map')}</h3>
+        <h3 style="margin:0 0 14px;color:#C4703F;">${t('result.side.map')}</h3>
         <img src="${mapDataUrl}" style="width:100%;height:auto;border-radius:10px;" />
       </div>`
   }
@@ -1958,24 +1957,24 @@ const buildExportHTML = (mapDataUrl: string = ''): string => {
             <div style="text-align:center;color:#00e5ff;font-weight:bold;margin-bottom:12px;font-size:15px;">${w.date}</div>
             <div style="display:flex;align-items:center;margin-bottom:10px;">
               <div style="line-height:1.2;">
-                <div style="font-size:12px;color:#99b0c9;margin-bottom:2px;">${t('result.export.daytime')}</div>
+                <div style="font-size:12px;color:#9AA3B2;margin-bottom:2px;">${t('result.export.daytime')}</div>
                 <div style="font-size:14px;color:#fff;font-weight:600;">${w.day_weather} ${w.day_temp}°C</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;margin-bottom:12px;">
               <div style="line-height:1.2;">
-                <div style="font-size:12px;color:#99b0c9;margin-bottom:2px;">${t('result.export.nighttime')}</div>
+                <div style="font-size:12px;color:#9AA3B2;margin-bottom:2px;">${t('result.export.nighttime')}</div>
                 <div style="font-size:14px;color:#fff;font-weight:600;">${w.night_weather} ${w.night_temp}°C</div>
               </div>
             </div>
-            <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;text-align:center;font-size:12px;color:#99b0c9;">
+            <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;text-align:center;font-size:12px;color:#9AA3B2;">
               ${w.wind_direction} ${w.wind_power}
             </div>
           </div>`
       })
       weatherHTML = `
         <div style="background:#ffffff;border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
-          <h3 style="margin:0 0 14px;color:#667eea;">${t('result.export.weatherTitle')}</h3>
+          <h3 style="margin:0 0 14px;color:#C4703F;">${t('result.export.weatherTitle')}</h3>
           <div style="display:flex;flex-wrap:wrap;gap:10px;">
             ${weatherCards}
           </div>
@@ -1983,7 +1982,7 @@ const buildExportHTML = (mapDataUrl: string = ''): string => {
     } else {
       weatherHTML = `
         <div style="background:#ffffff;border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 2px 10px rgba(0,0,0,0.06);">
-          <h3 style="margin:0 0 10px;color:#667eea;">${t('result.export.weatherTitle')}</h3>
+          <h3 style="margin:0 0 10px;color:#C4703F;">${t('result.export.weatherTitle')}</h3>
           <p style="font-size:14px;color:#333;line-height:1.8;">${typeof tp.weather_info === 'string' ? tp.weather_info : JSON.stringify(tp.weather_info)}</p>
         </div>`
     }
@@ -2012,7 +2011,7 @@ const buildExportHTML = (mapDataUrl: string = ''): string => {
   const footerHTML = `
     <div style="text-align:center;padding:24px 16px 16px;border-top:1px solid #e8e8e8;margin-top:8px;">
       <img src="${qrUrl}" style="width:120px;height:120px;margin-bottom:10px;" crossorigin="anonymous" />
-      <div style="font-size:13px;color:#667eea;font-weight:600;margin-bottom:4px;">TripStar</div>
+      <div style="font-size:13px;color:#C4703F;font-weight:600;margin-bottom:4px;">TripStellar</div>
       <div style="font-size:11px;color:#aaa;">https://github.com/1sdv/TripStar</div>
       <div style="font-size:11px;color:#bbb;margin-top:6px;">${t('result.export.footer')}</div>
     </div>`
@@ -2061,7 +2060,7 @@ const captureMapScreenshot = async (): Promise<string> => {
     await new Promise(resolve => setTimeout(resolve, 300))
 
     const mapCanvas = await html2canvas(mapEl, {
-      backgroundColor: '#1a1a2e',
+      backgroundColor: '#FBF6EF',
       scale: 2,
       logging: false,
       useCORS: true,
@@ -2121,7 +2120,7 @@ const exportAsImage = async () => {
     )
 
     const canvas = await html2canvas(exportContainer, {
-      backgroundColor: '#f0f2f5',
+      backgroundColor: '#FBF6EF',
       scale: 2,
       logging: false,
       useCORS: true,
@@ -2180,8 +2179,8 @@ const initKnowledgeGraph = () => {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      backgroundColor: 'rgba(12, 23, 32, 0.94)',
-      borderColor: 'rgba(215, 110, 66, 0.35)',
+      backgroundColor: 'rgba(58, 46, 36, 0.95)',
+      borderColor: 'rgba(176, 67, 31, 0.35)',
       borderWidth: 1,
       padding: [12, 16],
       textStyle: { color: '#fff', fontSize: 13 },
@@ -2189,7 +2188,7 @@ const initKnowledgeGraph = () => {
         if (params.dataType === 'node') {
           const catName = graphData.value?.categories[params.data.category]?.name || ''
           const cat = getCategoryLabel(catName)
-          let tip = `<b style="color:#ffe3d6;font-size:15px">${params.data.name}</b><br/>`
+          let tip = `<b style="color:#FFD9C4;font-size:15px">${params.data.name}</b><br/>`
           tip += `<span style="color:#aaa">${t('result.graph.type')}:</span>${cat}<br/>`
           if (params.data.value) {
             tip += `<span style="color:#aaa">${t('result.graph.detail')}:</span>${params.data.value}`
@@ -2197,7 +2196,7 @@ const initKnowledgeGraph = () => {
           return tip
         }
         if (params.dataType === 'edge') {
-          return `<span style="color:#ffe3d6">${params.data.label || t('result.graph.relation')}</span>`
+          return `<span style="color:#FFD9C4">${params.data.label || t('result.graph.relation')}</span>`
         }
         return ''
       }
@@ -2256,15 +2255,15 @@ const initKnowledgeGraph = () => {
         links: graphData.value.edges.map(edge => ({
           ...edge,
           lineStyle: {
-            color: 'rgba(255, 255, 255, 0.15)',
+            color: 'rgba(26, 24, 20, 0.18)',
             width: 1.5,
             curveness: 0.1,
           },
           label: {
             show: true,
             formatter: edge.label || '',
-            fontSize: 10,
-            color: 'rgba(255, 255, 255, 0.45)',
+            fontSize: 11,
+            color: '#6B6459',
           },
         })),
         categories: graphData.value.categories,
@@ -2280,8 +2279,8 @@ const initKnowledgeGraph = () => {
         },
         emphasis: {
           focus: 'adjacency',
-          lineStyle: { width: 4, color: '#d76e42' },
-          itemStyle: { borderColor: '#d76e42', borderWidth: 3 },
+          lineStyle: { width: 4, color: '#C4703F' },
+          itemStyle: { borderColor: '#C4703F', borderWidth: 3 },
         },
         edgeSymbol: ['none', 'arrow'],
         edgeSymbolSize: [0, 8],
@@ -2649,9 +2648,6 @@ const addGoogleAttractionMarkers = async () => {
     const div = document.createElement('div')
     div.innerHTML = buildMarkerContent(attraction.dayIndex + 1, attraction.attrIndex + 1)
     // 为了使 HTML 居中在点上，可以用 Marker 的 icon 承载或者用 AdvancedMarkerElement (如果你需要标准 API)。
-    // 这里采用兼容大多数的简单的 svg data URI：
-    const svgContent = buildFeatherCircleSvgDataUrl(34, '#d76e42', '#a14625')
-    
     // 这里如果想完全复用 DOM 较为复杂，我们可以直接采用原生的 google.maps.Marker 与自定义 icon
     // 用一个简单的 SVG data URI 画一个有数字的 icon
     const markerText = `${attraction.dayIndex + 1}-${attraction.attrIndex + 1}`
@@ -2945,8 +2941,8 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 .result-container {
   min-height: 100vh;
-  background: linear-gradient(180deg, #0d171d 0%, #142430 58%, #0f1a22 100%);
-  color: #ecf3fa;
+  background: var(--ts-paper);
+  color: var(--ts-ink-2);
   position: relative;
   isolation: isolate;
   overflow-x: hidden;
@@ -2957,7 +2953,8 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   inset: 0% 0 -1px 0;
   z-index: 0;
   pointer-events: none;
-  background: rgba(6, 14, 20, 0.72);
+  /* 跟随新的纸色，否则这层会把压暗后的底色重新提亮回去 */
+  background: rgba(236, 236, 233, 0.6);
 }
 
 .lower-shade::before {
@@ -2967,33 +2964,36 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   right: 0;
   top: -28px;
   height: 28px;
-  background: linear-gradient(to bottom, rgba(6, 14, 20, 0), rgba(6, 14, 20, 0.92));
+  background: linear-gradient(to bottom, rgba(236, 236, 233, 0), rgba(236, 236, 233, 0.94));
 }
 
 .result-main {
   position: relative;
   z-index: 2;
-  padding: 70px 20px 44px;
+  padding: 96px 20px 56px;
 }
 
 .content-wrapper {
-  max-width: 1400px;
+  max-width: var(--ts-measure);
   margin: 0 auto;
   display: block;
-  border: 1.2px solid rgba(236, 243, 250, 0.2);
-  border-radius: 22px;
-  background: rgba(12, 23, 32, 0.56);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 24px 80px rgba(4, 11, 18, 0.52);
-  padding: 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+  padding: 0;
 }
 
 .top-switch-nav {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 12px;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 28px;
+  /* 内边距把分隔线下移到所有子元素之外：无论菜单还是右侧按钮更高，线都不会与它们相交 */
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--ts-rule-strong);
 }
 
 .top-switch-menu-wrap {
@@ -3006,29 +3006,39 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 .top-switch-menu {
   width: 100%;
   min-width: 0;
-  border-bottom: 1px solid rgba(236, 243, 250, 0.16) !important;
+  border-bottom: none !important;
   background: transparent !important;
 }
 
 .top-switch-menu :deep(.ant-menu-item) {
-  color: rgba(232, 239, 247, 0.75) !important;
-  border-radius: 10px 10px 0 0;
-  margin-right: 4px !important;
-  transition: all 0.2s ease;
+  color: var(--ts-ink-2) !important;
+  border-radius: 0;
+  margin-right: 36px !important;
+  padding-inline: 0 !important;
+  /* 杂志感：栏目标题走衬线体、放大一号、拉开字距 */
+  font-family: var(--ts-font-serif);
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.04em;
+  transition: color 0.25s var(--ts-ease);
 }
 
 .top-switch-menu :deep(.ant-menu-item:hover) {
-  color: rgba(236, 243, 250, 0.95) !important;
+  color: var(--ts-ink) !important;
 }
 
 .top-switch-menu :deep(.ant-menu-item-selected) {
-  color: #ffe3d6 !important;
+  color: var(--ts-accent) !important;
+  font-weight: 700 !important;
 }
 
+/* 去掉 antd 菜单自带的底部指示条：当前分区靠强调色 + 字重区分，
+   避免它和分区线并排出现形成双线 */
+.top-switch-menu :deep(.ant-menu-item::after),
 .top-switch-menu :deep(.ant-menu-item-selected::after),
 .top-switch-menu :deep(.ant-menu-item-active::after),
 .top-switch-menu :deep(.ant-menu-item:hover::after) {
-  border-bottom-color: #d76e42 !important;
+  display: none !important;
 }
 
 .top-switch-menu :deep(.ant-menu-overflow) {
@@ -3037,139 +3047,165 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 .top-switch-actions {
   flex: 0 0 auto;
+  align-self: flex-end;
   display: flex;
   align-items: center;
+  gap: 8px;
+  padding-bottom: 0;
 }
 
 .top-switch-actions :deep(.ant-btn-default) {
-  border: 1.2px solid rgba(236, 243, 250, 0.24) !important;
-  background: rgba(12, 23, 32, 0.56) !important;
-  color: #ecf3fa !important;
-  border-radius: 999px !important;
+  border: 1px solid var(--ts-rule-strong) !important;
+  /* 纸色不透明底：任何背景元素都不会从按钮里透出来 */
+  background: var(--ts-paper) !important;
+  color: var(--ts-ink-2) !important;
+  border-radius: var(--ts-r-sm) !important;
   height: 34px !important;
-  padding: 0 12px !important;
+  padding: 0 16px !important;
+  font-family: var(--ts-font-mono) !important;
   font-size: 12px !important;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.top-switch-actions :deep(.ant-btn-default:hover) {
+  border-color: var(--ts-accent) !important;
+  color: var(--ts-accent) !important;
 }
 
 .top-switch-actions :deep(.ant-btn-primary) {
-  border: 1.2px solid rgba(215, 110, 66, 0.5) !important;
-  background: rgba(215, 110, 66, 0.24) !important;
-  color: #ffe3d6 !important;
-  border-radius: 999px !important;
+  border: 1px solid var(--ts-accent) !important;
+  background: var(--ts-accent) !important;
+  color: var(--ts-paper) !important;
+  border-radius: var(--ts-r-sm) !important;
   height: 34px !important;
-  padding: 0 12px !important;
+  padding: 0 16px !important;
+  font-family: var(--ts-font-mono) !important;
   font-size: 12px !important;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   box-shadow: none !important;
 }
 
 .empty-state-panel {
   max-width: 900px;
   margin: 0 auto;
-  border: 1.2px solid rgba(236, 243, 250, 0.2);
-  border-radius: 22px;
-  background: rgba(12, 23, 32, 0.56);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 24px 80px rgba(4, 11, 18, 0.52);
-  padding: 44px 20px;
+  border: 1px solid var(--ts-rule);
+  border-radius: 0;
+  background: var(--ts-card);
+  backdrop-filter: none;
+  box-shadow: none;
+  padding: 72px 20px;
   text-align: center;
 }
 
 .empty-desc {
-  color: rgba(228, 236, 245, 0.72);
+  color: var(--ts-ink-3);
+  font-size: 14px;
+  letter-spacing: 0.02em;
 }
 
 .empty-back-btn {
-  border: 1.2px solid rgba(215, 110, 66, 0.5) !important;
-  background: rgba(215, 110, 66, 0.24) !important;
-  color: #ffe3d6 !important;
-  border-radius: 999px !important;
-  min-height: 34px !important;
-  padding: 0 14px !important;
-  font-size: 12px !important;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  border: 1px solid var(--ts-accent) !important;
+  background: var(--ts-accent) !important;
+  color: var(--ts-paper) !important;
+  border-radius: var(--ts-r-sm) !important;
+  min-height: 36px !important;
+  padding: 0 18px !important;
+  font-family: var(--ts-font-mono) !important;
+  font-size: 11px !important;
+  font-weight: 500;
+  letter-spacing: var(--ts-tracking-caps);
+  text-transform: uppercase;
   box-shadow: none !important;
 }
 
 /* 景点图片样式 */
 .attraction-image-wrapper {
   position: relative;
-  margin-bottom: 12px;
-  border-radius: 12px;
+  margin-bottom: 14px;
+  border-radius: 0;
   overflow: hidden;
 }
 
 .attraction-image {
   width: 100%;
-  height: 200px;
+  height: 210px;
   object-fit: cover;
-  transition: transform 0.4s ease;
+  transition: transform 0.6s var(--ts-ease);
 }
 
 .attraction-image-wrapper:hover .attraction-image {
-  transform: scale(1.08);
+  transform: scale(1.04);
 }
 
+/* 图版编号：纸色方块 + 等宽数字，替代渐变圆钮 */
 .attraction-badge {
   position: absolute;
   top: 12px;
   left: 12px;
-  background: linear-gradient(135deg, #d76e42 0%, #a14625 100%);
-  color: white;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  background: var(--ts-paper);
+  color: var(--ts-ink);
+  width: 30px;
+  height: 30px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  box-shadow: 0 4px 12px rgba(215, 110, 66, 0.35);
+  font-family: var(--ts-font-mono);
+  font-weight: 500;
+  box-shadow: none;
 }
 
 .badge-number {
-  font-size: 18px;
+  font-family: var(--ts-font-mono);
+  font-size: 13px;
 }
 
 .price-tag {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: rgba(215, 110, 66, 0.9);
-  color: white;
-  padding: 4px 14px;
-  border-radius: 20px;
-  font-weight: bold;
-  font-size: 14px;
-  box-shadow: 0 4px 12px rgba(215, 110, 66, 0.3);
-  backdrop-filter: blur(10px);
+  background: rgba(250, 248, 244, 0.94);
+  color: var(--ts-ink);
+  padding: 4px 10px;
+  border-radius: 0;
+  font-family: var(--ts-font-mono);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 /* 预约提醒样式 */
 .reservation-alert {
-  margin-top: 10px;
-  padding: 8px 12px;
-  background: linear-gradient(135deg, rgba(255, 152, 0, 0.12) 0%, rgba(255, 87, 34, 0.08) 100%);
-  border: 1px solid rgba(255, 152, 0, 0.35);
-  border-radius: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--ts-accent-soft);
+  border: 0;
+  border-left: 2px solid var(--ts-accent);
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .reservation-badge {
-  font-size: 13px;
-  font-weight: 700;
-  color: #ff9800;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: var(--ts-tracking-caps);
+  text-transform: uppercase;
+  color: var(--ts-accent);
 }
 
 .reservation-tips {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
-  line-height: 1.5;
+  color: var(--ts-ink-2);
+  line-height: 1.6;
 }
 
 /* 天气看板样式 */
@@ -3181,65 +3217,69 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 .weather-dashboard {
   display: flex;
   height: 350px;
-  /* border-radius: 24px; */
   overflow: hidden;
-  /* border: 1px solid rgba(255, 255, 255, 0.14); */
-  background: none;
+  border: 1px solid var(--ts-rule);
+  background: var(--ts-card);
 }
 
+/* 墨色天气主栏：以墨块替代蓝紫渐变，纸色文字 */
 .weather-side {
   position: relative;
   flex: 0 0 300px;
-  /* min-height: 360px; */
-  /* border-radius: 26px; */
   overflow: hidden;
-  box-shadow: 0 0 20px -8px rgba(0, 0, 0, 0.36);
-  transition: transform 300ms ease;
-  transform: translateZ(0) scale(1.02) perspective(1200px);
+  box-shadow: none;
+  transition: none;
+  transform: none;
 }
 
 .weather-side:hover {
-  transform: scale(1.06) perspective(1400px) rotateY(6deg);
+  transform: none;
 }
 
 .weather-gradient {
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(140deg, #72edf2 0%, #5151e5 100%);
-  opacity: 0.84;
+  background-image: linear-gradient(160deg, var(--ts-ink) 0%, #2E2A24 100%);
+  opacity: 1;
 }
 
 .date-container {
   position: absolute;
-  top: 38px;
-  left: 38px;
+  top: 34px;
+  left: 32px;
   right: 28px;
   z-index: 2;
 }
 
 .date-dayname {
   margin: 0;
-  font-size: 26px;
-  line-height: 1.12;
+  font-family: var(--ts-font-serif);
+  font-size: 28px;
+  line-height: 1.15;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.96);
+  color: var(--ts-paper);
 }
 
 .date-day {
   display: block;
-  margin-top: 4px;
-  font-size: 13px;
-  letter-spacing: 0.03em;
-  color: rgba(240, 247, 255, 0.84);
+  margin-top: 8px;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  letter-spacing: var(--ts-tracking-caps);
+  text-transform: uppercase;
+  color: rgba(250, 248, 244, 0.58);
 }
 
 .location {
   display: inline-flex;
   align-items: center;
-  margin-top: 8px;
-  font-size: 16px;
-  font-weight: bold;
-  color: rgba(242, 248, 255, 0.9);
+  margin-top: 10px;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(250, 248, 244, 0.78);
 }
 
 .location-icon {
@@ -3248,20 +3288,20 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 .weather-container {
   position: absolute;
-  left: 28px;
+  left: 32px;
   right: 28px;
-  bottom: 28px;
+  bottom: 32px;
   z-index: 2;
 }
 
 .weather-hero-icon {
   display: inline-block;
-  color: #f7fbff;
+  color: var(--ts-paper);
   font-size: 0.78em;
   line-height: 1;
   margin-bottom: -22px;
   margin-left: -20px;
-  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.18));
+  filter: none;
 }
 
 .weather-icon {
@@ -3392,7 +3432,7 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   width: 1.125em;
   height: 1.125em;
   margin: -1em 0 0 -0.25em;
-  background: #0cf;
+  background: #CFC8BC;
   border-radius: 100% 0 60% 50% / 60% 0 100% 50%;
   box-shadow:
     0.625em 0.875em 0 -0.125em rgba(255, 255, 255, 0.2),
@@ -3496,28 +3536,30 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 .weather-temp {
-  margin: 8px 0 0;
-  font-size: 56px;
+  margin: 10px 0 0;
+  font-family: var(--ts-font-mono);
+  font-size: 52px;
   line-height: 0.95;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  color: var(--ts-paper);
+  letter-spacing: -0.03em;
 }
 
 .weather-desc {
-  margin: 8px 0 0;
-  font-size: 20px;
-  color: rgba(245, 249, 255, 0.94);
-  font-weight: 600;
+  margin: 10px 0 0;
+  font-size: 15px;
+  color: rgba(250, 248, 244, 0.76);
+  font-weight: 500;
+  letter-spacing: 0.08em;
 }
 
 .weather-info-side {
   flex: 1;
   min-width: 0;
-  padding: 16px 30px;
+  padding: 20px 30px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .today-info-container {
@@ -3527,7 +3569,7 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 .today-info {
-  padding: 10px 12px;
+  padding: 0;
 }
 
 .today-info-item {
@@ -3536,28 +3578,30 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   justify-content: space-between;
   gap: 8px;
   font-size: 12px;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 .today-info-item + .today-info-item {
-  margin-top: 6px;
-  padding-top: 6px;
-  /* border-top: 1px solid rgba(255, 255, 255, 0.08); */
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ts-rule);
 }
 
 .today-info-item .wea-title {
-  color: rgba(235, 243, 252, 0.809);
-  letter-spacing: 0.04em;
+  font-family: var(--ts-font-mono);
+  color: var(--ts-ink-3);
+  letter-spacing: var(--ts-tracking-caps);
   text-transform: uppercase;
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   padding: 3px 0;
 }
 
 .today-info-item .value {
-  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--ts-font-mono);
+  color: var(--ts-ink);
   text-align: right;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .week-container {
@@ -3580,26 +3624,29 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 .week-list > li {
   width: 86px;
-  padding: 8px 8px;
-  border-radius: 12px;
+  padding: 10px 8px;
+  border-radius: 0;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(238, 245, 253, 0.78);
+  transition: background-color 0.25s var(--ts-ease), color 0.25s var(--ts-ease),
+    border-color 0.25s var(--ts-ease);
+  border: 1px solid var(--ts-rule);
+  background: transparent;
+  color: var(--ts-ink-2);
 }
 
 .week-list > li:hover {
-  transform: translateY(-3px);
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(5, 12, 20, 0.9);
-  box-shadow: 0 10px 28px rgba(9, 15, 22, 0.32);
+  transform: none;
+  background: var(--ts-paper-2);
+  color: var(--ts-ink);
+  border-color: var(--ts-rule-strong);
+  box-shadow: none;
 }
 
 .week-list > li.active {
-  background: rgba(255, 255, 255, 0.9);
-  color: rgba(9, 14, 24, 0.92);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  background: var(--ts-ink);
+  border-color: var(--ts-ink);
+  color: var(--ts-paper);
+  box-shadow: none;
 }
 
 .week-list > li .day-icon {
@@ -3617,17 +3664,20 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 .week-list > li .day-name {
   display: block;
-  margin-top: 6px;
+  margin-top: 8px;
   text-align: center;
-  font-size: 12px;
-  letter-spacing: 0.03em;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .week-list > li .day-temp {
   display: block;
   text-align: center;
-  margin-top: 3px;
-  font-weight: 700;
+  margin-top: 4px;
+  font-family: var(--ts-font-mono);
+  font-weight: 500;
   font-size: 12px;
 }
 
@@ -3665,24 +3715,24 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 @keyframes weather-rain {
   0% {
-    background: #0cf;
+    background: #CFC8BC;
     box-shadow:
       0.625em 0.875em 0 -0.125em rgba(255, 255, 255, 0.2),
       -0.875em 1.125em 0 -0.125em rgba(255, 255, 255, 0.2),
-      -1.375em -0.125em 0 #0cf;
+      -1.375em -0.125em 0 #CFC8BC;
   }
 
   25% {
     box-shadow:
       0.625em 0.875em 0 -0.125em rgba(255, 255, 255, 0.2),
-      -0.875em 1.125em 0 -0.125em #0cf,
+      -0.875em 1.125em 0 -0.125em #CFC8BC,
       -1.375em -0.125em 0 rgba(255, 255, 255, 0.2);
   }
 
   50% {
     background: rgba(255, 255, 255, 0.3);
     box-shadow:
-      0.625em 0.875em 0 -0.125em #0cf,
+      0.625em 0.875em 0 -0.125em #CFC8BC,
       -0.875em 1.125em 0 -0.125em rgba(255, 255, 255, 0.2),
       -1.375em -0.125em 0 rgba(255, 255, 255, 0.2);
   }
@@ -3691,7 +3741,7 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
     box-shadow:
       0.625em 0.875em 0 -0.125em rgba(255, 255, 255, 0.2),
       -0.875em 1.125em 0 -0.125em rgba(255, 255, 255, 0.2),
-      -1.375em -0.125em 0 #0cf;
+      -1.375em -0.125em 0 #CFC8BC;
   }
 }
 
@@ -3703,8 +3753,8 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   }
 
   50% {
-    color: #0cf;
-    background: #0cf;
+    color: #CFC8BC;
+    background: #CFC8BC;
     opacity: 1;
   }
 
@@ -3717,48 +3767,58 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 /* 回到顶部按钮 */
 .back-top-button {
-  width: 50px;
-  height: 50px;
-  background: linear-gradient(135deg, #d76e42 0%, #a14625 100%);
-  color: white;
-  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  background: var(--ts-ink);
+  color: var(--ts-paper);
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  box-shadow: 0 4px 20px rgba(215, 110, 66, 0.38);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  box-shadow: none;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.25s var(--ts-ease);
 }
 
 .back-top-button:hover {
-  transform: scale(1.15);
-  box-shadow: 0 6px 28px rgba(215, 110, 66, 0.48);
+  transform: none;
+  background: var(--ts-accent);
+  box-shadow: none;
 }
 
 /* 酒店卡片样式 */
 .hotel-card {
-  background: rgba(215, 110, 66, 0.1) !important;
-  border: 1px solid rgba(215, 110, 66, 0.26) !important;
+  background: var(--ts-card) !important;
+  border: 1px solid var(--ts-rule) !important;
 }
 
 .hotel-card :deep(.ant-card-head) {
-  background: linear-gradient(135deg, rgba(215, 110, 66, 0.9) 0%, rgba(161, 70, 37, 0.9) 100%) !important;
+  background: var(--ts-paper-2) !important;
+  border-bottom: 1px solid var(--ts-rule) !important;
 }
 
 .hotel-title {
-  color: white !important;
-  font-weight: 600;
+  color: var(--ts-ink) !important;
+  font-family: var(--ts-font-serif);
+  font-weight: 700;
+  font-size: 17px;
 }
 
 .hotel-card :deep(.ant-descriptions-item-label) {
-  color: rgba(255, 255, 255, 0.5) !important;
+  color: var(--ts-ink-3) !important;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .hotel-card :deep(.ant-descriptions-item-content) {
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: var(--ts-ink) !important;
+  font-size: 13px;
 }
 
 /* 顶部信息区布局 */
@@ -3801,39 +3861,48 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 :deep(.section-shellless > .ant-card-body) {
   padding: 0 !important;
-  background: rgba(3, 8, 13, 0.726);
-  border-radius: 14px;
+  background: transparent;
+  border-radius: 0;
 }
 
 .overview-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 18px;
+  gap: 0;
+  /* 左右内缩，避免日期/Plan ID 紧贴分区左边界 */
+  padding: 2px 28px;
+  margin-bottom: 22px;
+  border-top: 1px solid var(--ts-rule);
+  border-bottom: 1px solid var(--ts-rule);
 }
 
 .overview-meta-item {
   display: inline-flex;
   align-items: center;
-  padding: 3px 12px;
-  /* border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04); */
-  color: rgba(236, 243, 250, 0.78);
-  font-size: 12px;
+  padding: 12px 22px 12px 0;
+  color: var(--ts-ink);
+  font-family: var(--ts-font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   line-height: 1.5;
 }
 
+.overview-meta-item + .overview-meta-item {
+  border-left: 1px solid var(--ts-rule);
+  padding-left: 20px;
+}
+
+/* 上下留出与分区分隔线的净空，卡片不再压线 */
 .overview-swiper {
-  padding: 8px 2px 10px;
+  padding: 6px 0 32px;
 }
 
 .overview-swiper .swiper {
-  padding: 0 0 0.6rem;
-  margin-top: -2rem;
-  margin-bottom: -2rem;
+  padding: 0;
+  margin: 0;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 0;
 }
 
 .overview-swiper .swiper-wrapper {
@@ -3849,21 +3918,21 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 .budget-detail-panel {
   min-height: 100%;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(3, 10, 15, 0.88);
-  padding: 18px;
+  border-radius: 0;
+  border: 1px solid var(--ts-rule);
+  background: var(--ts-card);
+  padding: 22px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .budget-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ts-rule);
 }
 
 .budget-toolbar-item {
@@ -3873,9 +3942,10 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 .budget-toolbar-label {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
-  letter-spacing: 0.04em;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  color: var(--ts-ink-3);
+  letter-spacing: var(--ts-tracking-caps);
   text-transform: uppercase;
 }
 
@@ -3884,21 +3954,29 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 .budget-select :deep(.ant-select-selector) {
-  border-radius: 10px !important;
-  border-color: rgba(255, 255, 255, 0.24) !important;
-  background: rgba(0, 0, 0, 0.2) !important;
-  color: rgba(255, 255, 255, 0.86) !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ts-rule-strong) !important;
+  background: transparent !important;
+  color: var(--ts-ink) !important;
+  box-shadow: none !important;
+}
+
+.budget-select :deep(.ant-select-selection-item) {
+  font-family: var(--ts-font-mono);
+  font-size: 12px;
 }
 
 .budget-select :deep(.ant-select-arrow) {
-  color: rgba(255, 255, 255, 0.72) !important;
+  color: var(--ts-ink-3) !important;
 }
 
 .budget-detail-list {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 12px;
+  border: 0;
+  border-top: 1px solid var(--ts-rule-strong);
+  border-radius: 0;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.18);
+  background: transparent;
 }
 
 .budget-detail-row {
@@ -3906,9 +3984,9 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   grid-template-columns: 112px 96px minmax(0, 1fr) 120px 86px;
   align-items: center;
   gap: 10px;
-  padding: 11px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.01);
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--ts-rule);
+  background: transparent;
 }
 
 .budget-detail-row:last-child {
@@ -3916,10 +3994,12 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 .budget-detail-header {
-  background: rgba(255, 255, 255, 0.04);
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.64);
-  letter-spacing: 0.03em;
+  background: transparent;
+  border-bottom: 1px solid var(--ts-rule-strong) !important;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  color: var(--ts-ink-3);
+  letter-spacing: var(--ts-tracking-caps);
   text-transform: uppercase;
 }
 
@@ -3927,8 +4007,13 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 .budget-detail-day,
 .budget-detail-name,
 .budget-detail-amount {
-  color: rgba(255, 255, 255, 0.86);
+  color: var(--ts-ink-2);
   font-size: 13px;
+}
+
+.budget-detail-day {
+  font-family: var(--ts-font-mono);
+  font-size: 12px;
 }
 
 .budget-detail-name {
@@ -3938,14 +4023,16 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 .budget-detail-amount {
-  font-weight: 600;
-  color: #ffd5c6;
+  font-family: var(--ts-font-mono);
+  font-weight: 500;
+  color: var(--ts-ink);
+  text-align: right;
 }
 
 .budget-action-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .budget-icon-btn {
@@ -3957,9 +4044,9 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 0;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s var(--ts-ease);
 }
 
 .budget-icon-btn svg {
@@ -3968,18 +4055,17 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 .budget-edit-btn {
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--ts-ink-4);
 }
 
 .budget-delete-btn {
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--ts-ink-4);
 }
 
 .budget-edit-btn:hover,
 .budget-delete-btn:hover {
-  color: #fff;
-  transform: scale(1.1);
-  /* background: rgba(110, 247, 213, 0.16); */
+  color: var(--ts-accent);
+  transform: none;
 }
 
 .right-budget-summary {
@@ -3988,41 +4074,46 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 .budget-summary-panel {
   min-height: 100%;
-  border-radius: 14px;
-  border: 1.2px solid rgba(255, 255, 255, 0.14);
-  background: rgba(3, 10, 15, 0.88);
-  padding: 18px;
+  border-radius: 0;
+  border: 1px solid var(--ts-rule);
+  background: var(--ts-card);
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
 }
 
 .budget-summary-title {
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 34px;
-  font-weight: 300;
-  letter-spacing: 0.02em;
-  line-height: 1;
+  color: var(--ts-ink);
+  font-family: var(--ts-font-serif);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  line-height: 1.25;
 }
 
 .budget-summary-total-wrap {
   display: flex;
   align-items: flex-start;
-  gap: 4px;
+  gap: 6px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--ts-rule-strong);
 }
 
 .budget-summary-currency {
-  font-size: 42px;
+  font-family: var(--ts-font-mono);
+  font-size: 34px;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--ts-ink-3);
 }
 
 .budget-summary-total-value {
-  font-size: 78px;
-  line-height: 0.88;
-  font-weight: 300;
-  color: rgba(255, 255, 255, 0.96);
-  letter-spacing: 0.01em;
+  font-family: var(--ts-font-mono);
+  font-size: 68px;
+  line-height: 0.9;
+  font-weight: 500;
+  color: var(--ts-ink);
+  letter-spacing: -0.02em;
 }
 
 .budget-summary-sub-grid {
@@ -4033,42 +4124,45 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 .budget-summary-sub-item {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--ts-rule);
   padding-top: 8px;
 }
 
 .budget-summary-sub-value {
-  font-size: 32px;
+  font-family: var(--ts-font-mono);
+  font-size: 30px;
+  font-weight: 500;
   line-height: 1;
-  color: #ffd4c3;
+  color: var(--ts-ink);
 }
 
 .budget-summary-sub-label {
   margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.4;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.65);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: var(--ts-tracking-caps);
+  color: var(--ts-ink-3);
   text-transform: uppercase;
 }
 
 .budget-pending-wrap {
   margin-top: 4px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid var(--ts-rule);
 }
 
 .budget-pending-title {
   font-size: 12px;
   letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--ts-ink-3);
   margin-bottom: 8px;
   text-transform: uppercase;
 }
 
 .budget-pending-empty {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--ts-ink-3);
   padding: 8px 0;
 }
 
@@ -4083,16 +4177,17 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 10px 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--ts-rule);
 }
 
 .budget-pending-name {
   flex: 1;
   min-width: 0;
-  color: rgba(255, 255, 255, 0.84);
+  color: var(--ts-ink);
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
@@ -4117,7 +4212,7 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 #google-map-container,
 #amap-container {
-  background: #16212b;
+  background: var(--ts-paper-3);
 }
 
 /* 知识图谱卡片 */
@@ -4134,10 +4229,10 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   flex-wrap: wrap;
   justify-content: center;
   gap: 16px;
-  padding: 12px 20px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(6, 8, 14, 0.86);
-  border-radius: 0 0 16px 16px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--ts-rule);
+  background: var(--ts-paper-2);
+  border-radius: 0;
 }
 
 .kg-legend-item {
@@ -4145,7 +4240,7 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--ts-ink-2);
 }
 
 .kg-legend-dot {
@@ -4171,75 +4266,92 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 .day-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  font-family: var(--ts-font-serif);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ts-ink);
 }
 
 .day-date {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.35);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ts-ink-3);
   margin-left: auto;
 }
 
 .day-city-tag {
   display: inline-block;
-  padding: 2px 10px;
-  border-radius: 6px;
-  background: rgba(90, 216, 166, 0.15);
-  border: 1px solid rgba(90, 216, 166, 0.3);
-  color: #5ad8a6;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 0;
+  background: transparent;
+  border: 1px solid var(--ts-rule-strong);
+  color: var(--ts-ink-2);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   margin-left: 10px;
 }
 
 .day-transfer-tag {
   display: inline-block;
-  padding: 2px 10px;
-  border-radius: 6px;
-  background: rgba(246, 189, 22, 0.15);
-  border: 1px solid rgba(246, 189, 22, 0.35);
-  color: #f6bd16;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 0;
+  background: var(--ts-accent-soft);
+  border: 1px solid var(--ts-accent-line);
+  color: var(--ts-accent);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   margin-left: 6px;
 }
 
 .transfer-info-banner {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
-  border-radius: 10px;
-  background: rgba(246, 189, 22, 0.08);
-  border: 1px solid rgba(246, 189, 22, 0.2);
+  gap: 10px;
+  padding: 12px 0;
+  margin-bottom: 18px;
+  border-radius: 0;
+  border: 0;
+  border-top: 1px solid var(--ts-rule);
+  border-bottom: 1px solid var(--ts-rule);
+  background: transparent;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--ts-ink-2);
 }
 
 .transfer-info-icon {
-  font-size: 18px;
+  font-size: 16px;
+  color: var(--ts-accent);
 }
 
 .transfer-info-label {
-  font-weight: 600;
-  color: #f6bd16;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ts-accent);
 }
 
 .day-info {
-  margin-bottom: 20px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 22px;
+  padding: 0 0 16px;
+  background: transparent;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid var(--ts-rule);
 }
 
 .info-row {
   display: flex;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 16px;
+  margin-bottom: 10px;
 }
 
 .info-row:last-child {
@@ -4247,61 +4359,71 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 .info-row .label {
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.45);
-  min-width: 100px;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: var(--ts-tracking-caps);
+  text-transform: uppercase;
+  color: var(--ts-ink-3);
+  min-width: 110px;
 }
 
 .info-row .value {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--ts-ink-2);
+  font-size: 13px;
   flex: 1;
 }
 
-/* 卡片样式 - 玻璃拟态暗色 */
+/* 卡片样式 - 奶油暖调 */
 :deep(.ant-card) {
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04) !important;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  margin-bottom: 20px;
-  transition: all 0.3s ease;
-  animation: fadeInUp 0.6s ease-out;
-  color: rgba(255, 255, 255, 0.8);
+  border-radius: var(--ts-r-md);
+  background: var(--ts-card) !important;
+  backdrop-filter: none;
+  border: 1px solid var(--ts-rule) !important;
+  box-shadow: none;
+  margin-bottom: 24px;
+  transition: border-color 0.3s var(--ts-ease);
+  animation: fadeInUp 0.6s var(--ts-ease) both;
+  color: var(--ts-ink-2);
 }
 
 :deep(.ant-card:hover) {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-  border-color: rgba(215, 110, 66, 0.26) !important;
+  box-shadow: none;
+  border-color: var(--ts-rule-strong) !important;
 }
 
 :deep(.ant-card-head) {
-  background: linear-gradient(135deg, rgba(215, 110, 66, 0.2) 0%, rgba(161, 70, 37, 0.14) 100%) !important;
-  color: #ffe3d6 !important;
-  border-radius: 16px 16px 0 0;
-  font-weight: 600;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  background: transparent !important;
+  color: var(--ts-ink) !important;
+  border-radius: 0;
+  min-height: 58px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--ts-rule) !important;
 }
 
 :deep(.ant-card-head-title) {
-  color: #ffe3d6 !important;
-  font-size: 18px;
+  color: var(--ts-ink) !important;
+  font-family: var(--ts-font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  padding: 16px 0;
 }
 
 :deep(.ant-card-head-title span) {
-  color: #ffe3d6 !important;
+  color: var(--ts-ink) !important;
 }
 
 :deep(.ant-card-body) {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--ts-ink-2);
 }
 
 :deep(.ant-card-body p) {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--ts-ink-2);
 }
 
 :deep(.ant-card-body strong) {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--ts-ink-3);
 }
 
 /* Collapse 样式 - 暗色 */
@@ -4311,32 +4433,35 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 :deep(.ant-collapse-item) {
-  margin-bottom: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 16px !important;
+  margin-bottom: 0;
+  border: 0 !important;
+  border-top: 1px solid var(--ts-rule-strong) !important;
+  border-radius: 0 !important;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.02);
+  background: transparent;
 }
 
 :deep(.ant-collapse-header) {
-  background: rgba(255, 255, 255, 0.04) !important;
-  padding: 16px 20px !important;
+  background: transparent !important;
+  /* 左右留出内边距，避免「第 X 天」与日期贴住卡片边界 */
+  padding: 20px 28px !important;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: var(--ts-ink) !important;
 }
 
 :deep(.ant-collapse-expand-icon) {
-  color: rgba(255, 255, 255, 0.4) !important;
+  color: var(--ts-ink-3) !important;
 }
 
 :deep(.ant-collapse-content) {
-  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-top: 1px solid var(--ts-rule) !important;
   background: transparent !important;
 }
 
 :deep(.ant-collapse-content-box) {
-  padding: 20px;
-  color: rgba(255, 255, 255, 0.7);
+  /* 与折叠头的左右内边距对齐，展开后内容不会突然外扩 */
+  padding: 24px 28px;
+  color: var(--ts-ink-2);
 }
 
 /* Descriptions 暗色 */
@@ -4345,38 +4470,38 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 :deep(.ant-descriptions-bordered .ant-descriptions-item-label) {
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: rgba(255, 255, 255, 0.5) !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
+  background: var(--ts-paper-2) !important;
+  color: var(--ts-ink-3) !important;
+  border-color: var(--ts-rule) !important;
 }
 
 :deep(.ant-descriptions-bordered .ant-descriptions-item-content) {
   background: transparent !important;
-  color: rgba(255, 255, 255, 0.8) !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
+  color: var(--ts-ink) !important;
+  border-color: var(--ts-rule) !important;
 }
 
 :deep(.ant-descriptions-item-label) {
-  color: rgba(255, 255, 255, 0.5) !important;
+  color: var(--ts-ink-3) !important;
 }
 
 :deep(.ant-descriptions-item-content) {
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: var(--ts-ink) !important;
 }
 
-/* Divider 暗色 */
+/* Divider 奶油 */
 :deep(.ant-divider) {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  color: rgba(255, 255, 255, 0.6) !important;
+  border-color: var(--ts-rule) !important;
+  color: var(--ts-ink-3) !important;
 }
 
 :deep(.ant-divider-inner-text) {
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: var(--ts-ink-3) !important;
 }
 
-/* Empty 暗色 */
+/* Empty 奶油 */
 :deep(.ant-empty-description) {
-  color: rgba(255, 255, 255, 0.4) !important;
+  color: var(--ts-ink-3) !important;
 }
 
 /* 景点卡片样式 */
@@ -4385,7 +4510,7 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 }
 
 :deep(.ant-list-item:hover) {
-  transform: scale(1.02);
+  transform: none;
 }
 
 /* 动画 */
@@ -4414,11 +4539,12 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 /* 响应式设计 */
 @media (max-width: 768px) {
   .result-main {
-    padding: 60px 10px 24px;
+    /* 顶部需让开 64~70px 的固定导航栏，避免内容被压住 */
+    padding: 88px 16px 40px;
   }
 
   .content-wrapper {
-    padding: 14px;
+    padding: 0;
   }
 
   .top-switch-nav {
@@ -4454,9 +4580,9 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
   .top-switch-actions :deep(.ant-btn-default),
   .top-switch-actions :deep(.ant-btn-primary) {
-    height: 32px !important;
-    padding: 0 10px !important;
-    font-size: 11px !important;
+    height: 34px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
   }
 
   .top-info-section {
@@ -4470,14 +4596,14 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   .weather-dashboard {
     flex-direction: column;
     min-height: auto;
-    border-radius: 16px;
+    border-radius: 0;
   }
 
   .weather-side {
     flex: 0 0 auto;
     width: 100%;
     min-height: 260px;
-    border-radius: 16px 16px 0 0;
+    border-radius: 0;
     transform: none !important;
   }
 
@@ -4526,12 +4652,19 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
   .overview-meta {
     gap: 8px;
+    padding: 2px 16px;
     margin-bottom: 14px;
   }
 
   .overview-meta-item {
     width: 100%;
-    border-radius: 12px;
+    border-radius: 0;
+    border-left: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  .overview-swiper {
+    padding: 4px 0 22px;
   }
 
   .overview-swiper .swiper-wrapper {
@@ -4540,7 +4673,7 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   }
 
   .overview-swiper .swiper {
-    padding: 2.4rem 0 0.6rem;
+    padding: 0;
   }
 
   .budget-toolbar {
@@ -4575,12 +4708,12 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 
 <style>
 :root {
-  --tripstar-map-accent: #d76e42;
-  --tripstar-map-accent-strong: #a14625;
-  --tripstar-map-surface: rgba(17, 29, 38, 0.96);
-  --tripstar-map-border: rgba(215, 110, 66, 0.35);
-  --tripstar-map-text-main: #f6fbff;
-  --tripstar-map-text-sub: rgba(240, 246, 252, 0.72);
+  --tripstar-map-accent: var(--ts-accent);
+  --tripstar-map-accent-strong: var(--ts-accent-deep);
+  --tripstar-map-surface: rgba(26, 24, 20, 0.95);
+  --tripstar-map-border: var(--ts-accent-line);
+  --tripstar-map-text-main: var(--ts-paper);
+  --tripstar-map-text-sub: rgba(250, 248, 244, 0.72);
 }
 
 .tripstar-map-marker {
@@ -4591,7 +4724,7 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.35));
+  filter: drop-shadow(0 4px 10px rgba(26, 24, 20, 0.3));
 }
 
 .tripstar-map-marker__core {
@@ -4599,14 +4732,14 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   z-index: 1;
   width: 30px;
   height: 30px;
-  border-radius: 50%;
+  border-radius: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
-  background: linear-gradient(135deg, #ff8a3d 0%, #d76e42 52%, #a14625 100%);
-  border: 2px solid rgba(255, 255, 255, 0.92);
-  box-shadow: 0 4px 12px rgba(39, 20, 8, 0.45);
+  color: var(--ts-paper);
+  background: linear-gradient(135deg, var(--ts-accent) 0%, var(--ts-accent-deep) 100%);
+  border: 1px solid var(--ts-paper);
+  box-shadow: none;
 }
 
 .tripstar-map-marker__icon {
@@ -4620,17 +4753,19 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
   top: calc(100% - 8px);
   left: 50%;
   transform: translateX(-50%);
-  min-width: 28px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.15;
-  color: #1f130b;
+  min-width: 24px;
+  padding: 2px 5px;
+  border-radius: 0;
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  color: var(--ts-ink);
   text-align: center;
-  background: rgba(255, 247, 239, 0.96);
-  border: 1px solid rgba(161, 70, 37, 0.55);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+  background: var(--ts-paper);
+  border: 1px solid var(--ts-rule-strong);
+  box-shadow: none;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -4648,10 +4783,10 @@ const drawRoutes = async (AMap: any, attractions: any[]): Promise<any[]> => {
 .tripstar-map-tooltip__line {
   margin: 0;
   font-size: 12px;
-  line-height: 1.45;
-  color: #ffd6c7 !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
-  background-color: rgba(0, 0, 0, 0.05);
+  line-height: 1.5;
+  color: var(--ts-paper-2) !important;
+  text-shadow: 0 1px 3px rgba(26, 24, 20, 0.9);
+  background-color: transparent;
   white-space: nowrap;
 }
 

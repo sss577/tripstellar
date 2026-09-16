@@ -67,25 +67,29 @@ watch(
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
-
+/* 字体族已在 index.html 预加载，此处只声明字栈，避免重复请求 */
 * {
   box-sizing: border-box;
 }
 
 #app {
-  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    'Noto Sans', sans-serif;
+  font-family: var(--ts-font-sans);
+  font-size: 15px;
+  line-height: 1.7;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--ts-paper);
+  color: var(--ts-ink-2);
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  text-rendering: optimizeLegibility;
 }
 
 .app-header {
-  background: linear-gradient(135deg, #0a0a0f 0%, #15132b 40%, #1a1035 100%) !important;
+  background: rgba(250, 248, 244, 0.88) !important;
   padding: 0 48px !important;
   height: 72px !important;
   line-height: 72px !important;
-  border-bottom: 1px solid rgba(255, 179, 71, 0.15);
+  border-bottom: 1px solid var(--ts-rule);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -106,11 +110,11 @@ watch(
   align-items: center;
   gap: 16px;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: opacity 0.3s var(--ts-ease);
 }
 
 .header-brand:hover {
-  transform: scale(1.03);
+  opacity: 0.72;
 }
 
 .brand-logo {
@@ -125,14 +129,14 @@ watch(
 .logo-icon {
   font-size: 28px;
   z-index: 1;
-  filter: drop-shadow(0 0 8px rgba(255, 179, 71, 0.5));
+  filter: drop-shadow(0 0 8px rgba(176, 67, 31, 0.35));
 }
 
 .logo-ring {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 2px solid rgba(255, 179, 71, 0.4);
+  border: 1px solid var(--ts-rule-strong);
   animation: ringPulse 3s ease-in-out infinite;
 }
 
@@ -148,17 +152,18 @@ watch(
 }
 
 .brand-text {
-  color: #FFD699;
+  font-family: var(--ts-font-serif);
+  color: var(--ts-ink);
   font-size: 22px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .brand-sub {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--ts-ink-3);
   font-size: 11px;
   font-weight: 400;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--ts-tracking-caps);
   text-transform: uppercase;
 }
 
@@ -173,61 +178,62 @@ watch(
 }
 
 .lang-select .ant-select-selector {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 179, 71, 0.2) !important;
-  border-radius: 20px !important;
-  color: #FFD699 !important;
+  background: var(--ts-card) !important;
+  border: 1px solid var(--ts-rule) !important;
+  border-radius: var(--ts-r-sm) !important;
+  color: var(--ts-ink-2) !important;
 }
 
 .lang-select .ant-select-selection-item {
-  color: #FFD699 !important;
+  color: var(--ts-ink-2) !important;
   font-size: 12px;
 }
 
 .lang-select .ant-select-arrow {
-  color: rgba(255, 214, 153, 0.7) !important;
+  color: var(--ts-ink-3) !important;
 }
 
 .header-badge {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 179, 71, 0.1);
-  border: 1px solid rgba(255, 179, 71, 0.2);
-  color: #FFD699;
-  font-size: 13px;
+  background: transparent;
+  border: 1px solid var(--ts-rule-strong);
+  color: var(--ts-accent);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
   font-weight: 500;
-  padding: 6px 18px;
-  border-radius: 24px;
-  letter-spacing: 0.05em;
+  padding: 6px 16px;
+  border-radius: var(--ts-r-sm);
+  letter-spacing: var(--ts-tracking-caps);
+  text-transform: uppercase;
   line-height: 1.2;
 }
 
 .badge-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+  background: var(--ts-accent);
   animation: dotBlink 2s ease-in-out infinite;
 }
 
 @keyframes dotBlink {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50% { opacity: 0.35; }
 }
 
 .app-footer {
-  background: linear-gradient(135deg, #0a0a0f 0%, #15132b 40%, #1a1035 100%) !important;
+  background: var(--ts-paper-2) !important;
   padding: 24px 48px !important;
-  border-top: 1px solid rgba(255, 179, 71, 0.1);
+  border-top: 1px solid var(--ts-rule);
 }
 
 .footer-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 1400px;
+  max-width: var(--ts-measure);
   margin: 0 auto;
 }
 
@@ -238,13 +244,14 @@ watch(
 }
 
 .footer-brand {
-  color: #FFD699;
+  font-family: var(--ts-font-serif);
+  color: var(--ts-ink);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .footer-copy {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--ts-ink-3);
   font-size: 12px;
 }
 
@@ -254,9 +261,11 @@ watch(
 }
 
 .footer-tech {
-  color: rgba(255, 255, 255, 0.25);
-  font-size: 12px;
+  color: var(--ts-ink-3);
+  font-family: var(--ts-font-mono);
+  font-size: 11px;
   font-weight: 400;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 </style>

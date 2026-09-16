@@ -189,13 +189,56 @@ class XhsNativeClient:
 
 # ============ 客户端工厂 ============
 
-def get_xhs_client() -> XhsNativeClient:
-    """初始化并返回原生小红书客户端"""
+class XhsNativeOnlyClient:
+    """小红书客户端：仅使用原生签名引擎（直连 edith.xiaohongshu.com API）。
+
+    不再降级到 Playwright 浏览器方案（浏览器拦截 XHR 的方案在 Cookie 失效/
+    风控时会长时间挂起，拖垮整个搜图接口）。
+
+    原生引擎返回软风控（success=true 但 data 无 items）或抛异常时，
+    统一抛出 XHSCookieExpiredError，由上层提示用户更新 Cookie；
+    单条笔记详情获取失败时也可由上层 SSR 抓取兜底。
+    """
+
+    def __init__(self, cookies_str: str):
+        self._cookies_str = cookies_str
+        self._native = XhsNativeClient(cookies_str)
+
+    def search_notes(self, keyword: str, page: int = 1, sort_type: int = 0,
+                     page_size: int = 20) -> dict:
+        """搜索笔记：仅走原生签名引擎，软风控/异常时抛错。"""
+        res = self._native.search_notes(
+            keyword=keyword, page=page, sort_type=sort_type,
+            page_size=page_size,
+        )
+        data = res.get("data")
+        if isinstance(data, dict) and "items" in data:
+            return res
+        # 软风控：success=true 但 data 是空壳（连 items 键都没有）
+        logger.warning("原生签名引擎疑似软风控（data 无 items）: %s", keyword)
+        raise XHSCookieExpiredError(
+            "小红书返回软风控（搜索结果为空），请更新 XHS_COOKIE 后重试"
+        )
+
+    def get_note_detail(self, note_id: str, xsec_token: str = "",
+                        xsec_source: str = "pc_search") -> dict:
+        """获取笔记详情：仅走原生签名引擎，失败时抛错交由上层 SSR 兜底。"""
+        res = self._native.get_note_detail(note_id, xsec_token, xsec_source)
+        if res.get("success") and res.get("data", {}).get("items"):
+            return res
+        logger.warning("原生签名引擎获取笔记详情失败: %s", note_id)
+        raise XHSCookieExpiredError(
+            f"小红书笔记详情获取失败（note_id={note_id}），请更新 XHS_COOKIE 后重试"
+        )
+
+
+def get_xhs_client():
+    """初始化并返回小红书客户端（仅原生签名引擎，不降级浏览器）。"""
     settings = get_settings()
     if not settings.xhs_cookie:
         raise XHSCookieExpiredError("小红书 Cookie 未配置，请先在前端设置页完成配置")
     cookie_str = normalize_xhs_cookie(settings.xhs_cookie)
-    return XhsNativeClient(cookie_str)
+    return XhsNativeOnlyClient(cookie_str)
 
 
 # ============ 高德地理编码 ============
@@ -399,82 +442,82 @@ JSON 返回示例:
 
 # ============ 景点搜图 ============
 
+def _pick_first_image(image_list: list) -> str:
+    """从笔记图片列表提取第一张图 URL（优先高清）。"""
+    if not image_list:
+        return ""
+    first_img = image_list[0] or {}
+    info_list = first_img.get("info_list", []) or []
+    if len(info_list) > 1 and info_list[1].get("url"):
+        return info_list[1]["url"]
+    if info_list and info_list[0].get("url"):
+        return info_list[0]["url"]
+    return (
+        first_img.get("url_default", "")
+        or first_img.get("url_pre", "")
+        or first_img.get("url", "")
+    )
+
+
 def get_xhs_photo_sync(keyword: str) -> str:
     """根据关键词从小红书搜索一张首图URL
 
-    使用原生签名客户端搜索最新帖子，然后通过原生 API 或 SSR 抓取首张图片。
+    搜索结果中的 image_list/cover 已带图片 URL，优先直接使用（免开笔记页）；
+    拿不到时再通过笔记详情/SSR 抓取降级。
     """
     try:
         client = get_xhs_client()
 
-        # 搜图时强制按"最新"排序，避开综合高赞的含文字攻略图
         res_json = client.search_notes(keyword=keyword, sort_type=0)
         items = res_json.get("data", {}).get("items", [])
 
-        target_note_id = None
-        target_xsec_token = ""
         for note in items:
-            if note.get("model_type") == "note":
-                target_note_id = note.get("id")
-                target_xsec_token = note.get("xsec_token", "")
-                break
+            if note.get("model_type") != "note":
+                continue
 
-        if not target_note_id:
-            return ""
+            card = note.get("note_card", {})
 
-        # 方案 A: 通过原生 API 获取笔记详情和图片
-        try:
-            detail_res = client.get_note_detail(
-                target_note_id, target_xsec_token
-            )
-            detail_items = detail_res.get("data", {}).get("items", [])
-            if detail_items:
-                note_card = detail_items[0].get("note_card", {})
-                image_list = note_card.get("image_list", [])
-                if image_list:
-                    # 取第一张图的 URL
-                    first_img = image_list[0]
-                    # 优先 info_list 中的高清图
-                    info_list = first_img.get("info_list", [])
-                    if len(info_list) > 1:
-                        return info_list[1].get("url", "")
-                    elif info_list:
-                        return info_list[0].get("url", "")
-                    # 降级到其他字段
-                    return (
-                        first_img.get("url_default", "")
-                        or first_img.get("url_pre", "")
-                        or first_img.get("url", "")
+            # 方案 A: 直接使用搜索结果自带的图片（最快）
+            url = _pick_first_image(card.get("image_list", []))
+            if url:
+                return url
+            cover = card.get("cover", {}) or {}
+            if cover.get("url_default") or cover.get("url"):
+                return cover.get("url_default") or cover.get("url", "")
+
+            # 方案 B: 打开笔记页获取详情图片
+            target_note_id = note.get("id", "")
+            target_xsec_token = note.get("xsec_token", "")
+            if target_note_id:
+                try:
+                    detail_res = client.get_note_detail(
+                        target_note_id, target_xsec_token
                     )
-        except Exception:
-            pass
+                    detail_items = detail_res.get("data", {}).get("items", [])
+                    if detail_items:
+                        note_card = detail_items[0].get("note_card", {})
+                        url = _pick_first_image(note_card.get("image_list", []))
+                        if url:
+                            return url
+                except Exception:
+                    pass
 
-        # 方案 B: 降级到 SSR 抓取
-        url = f"https://www.xiaohongshu.com/explore/{target_note_id}"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-        resp = httpx.get(url, headers=headers, timeout=10)
-
-        match = re.search(r'window\.__INITIAL_STATE__=({.*?})</script>', resp.text)
-        if match:
-            state_json_str = match.group(1).replace("undefined", "null")
-            state_json = json.loads(state_json_str)
-            note_data = (
-                state_json.get("note", {})
-                .get("noteDetailMap", {})
-                .get(target_note_id, {})
-                .get("note", {})
-            )
-            img_list = note_data.get("imageList", [])
-            if img_list:
-                first_img = (
-                    img_list[0].get("urlDefault")
-                    or img_list[0].get("urlPattern")
-                    or img_list[0].get("url")
-                )
-                if first_img:
-                    return first_img
+                # 方案 C: 降级到 SSR 抓取（游客 httpx）
+                try:
+                    detail = get_note_detail_ssr(target_note_id)
+                    img_list = detail.get("imageList", [])
+                    if img_list:
+                        first_img = img_list[0] or {}
+                        url = (
+                            first_img.get("urlDefault")
+                            or first_img.get("urlPattern")
+                            or first_img.get("url", "")
+                        )
+                        if url:
+                            return url
+                except Exception:
+                    pass
+            break
 
     except Exception as e:
         print(f"小红书单图抓取失败 ({keyword}): {e}")

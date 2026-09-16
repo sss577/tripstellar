@@ -49,15 +49,15 @@ const { t } = useI18n()
 </script>
 
 <style scoped lang="scss">
-@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz@6..12&family=Raleway:wght@700&display=swap");
+/* 字体统一由 global.css 令牌层提供，此处不再重复 @import */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "Nunito Sans", sans-serif;
+  font-family: var(--ts-font-sans);
 }
 body {
-  background: #fff;
+  background: var(--ts-paper);
 }
 main {
   position: relative;
@@ -81,12 +81,18 @@ main {
   flex-direction: column;
   justify-content: end;
   align-items: self-start;
-  box-shadow: 0.063rem 0.5rem 1.25rem hsl(0deg 0% 0% / 12.16%);
-  border-bottom-left-radius: 0.5rem;
-  border-bottom-right-radius: 0.5rem;
-  background-color: #fff;
+  box-shadow: none;
+  border: 1px solid var(--ts-rule);
+  border-radius: 0;
+  background-color: var(--ts-card);
   overflow: hidden;
   position: relative;
+  transition: border-color 0.4s var(--ts-ease);
+
+  &:hover {
+    box-shadow: none;
+    border-color: var(--ts-rule-strong);
+  }
 
   &-img {
     position: relative;
@@ -95,7 +101,7 @@ main {
     flex-shrink: 0;
     overflow: hidden;
     line-height: 0;
-    background-color: #1a262f;
+    background-color: var(--ts-paper-3);
 
     img {
       width: 100%;
@@ -104,7 +110,7 @@ main {
       inset: 0;
       object-fit: cover;
       z-index: 0;
-      transition: transform 0.3s ease-in-out;
+      transition: transform 0.7s var(--ts-ease);
     }
 
     svg {
@@ -118,17 +124,16 @@ main {
       z-index: 1;
     }
     .shape-fill {
-      fill: #ffffff;
+      fill: var(--ts-card);
     }
   }
 
   &-content {
     position: relative;
     z-index: 2;
-    background: #fff;
-    border-bottom-left-radius: 0.5rem;
-    border-bottom-right-radius: 0.5rem;
-    padding: 0 1.65rem;
+    background: var(--ts-card);
+    border-radius: 0;
+    padding: 0 1.4rem;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -139,22 +144,22 @@ main {
     }
 
     h2 {
-      color: #000;
-      font-family: "Raleway", sans-serif;
+      color: var(--ts-ink);
+      font-family: var(--ts-font-serif);
       font-weight: 700;
-      font-size: 1.4rem;
-      line-height: 1.4;
-      margin-bottom: 0.425rem;
-      text-transform: capitalize;
-      letter-spacing: 0.02rem;
+      font-size: 1.25rem;
+      line-height: 1.35;
+      margin-bottom: 0.5rem;
+      text-transform: none;
+      letter-spacing: -0.005em;
       white-space: nowrap;
       text-overflow: ellipsis;
     }
 
     p {
-      color: #000 !important;
-      line-height: 1.6;
-      font-size: 0.9rem;
+      color: var(--ts-ink-2) !important;
+      line-height: 1.7;
+      font-size: 0.85rem;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       line-clamp: 2;
@@ -164,42 +169,50 @@ main {
     }
 
     .show-more {
-      width: 3.125rem;
+      width: 2.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #f5593d;
-      border-radius: 50%;
-      box-shadow: 0px 0.125rem 0.875rem #e7882f6b;
+      background: var(--ts-accent);
+      border-radius: 0;
+      box-shadow: none;
       margin-top: 1em;
-      margin-bottom: 0.8em;
+      margin-bottom: 0.9em;
       height: 0;
       opacity: 0;
-      transition: opacity 0.3s ease-in;
+      overflow: hidden;
+      transition: opacity 0.3s var(--ts-ease), height 0.3s var(--ts-ease);
       margin-left: auto;
 
       &:hover {
-        background: #cc462f;
+        background: var(--ts-accent-deep);
       }
 
       svg {
-        width: 1.75rem;
-        color: #fff;
+        width: 1.5rem;
+        color: var(--ts-paper);
       }
     }
   }
 }
 
-.swiper-slide-active:hover img {
-  transform: scale(1.2) rotate(-5deg);
+/* 当前选中（焦点）卡的视觉强调 */
+.swiper-slide-active {
+  box-shadow: none;
+  border-color: var(--ts-rule-strong);
 }
 
-.swiper-slide-active:hover .show-more {
+/* 悬停仅做轻微推近，保持克制的编辑式节奏 */
+.swiper-slide:hover img {
+  transform: scale(1.04);
+}
+
+.swiper-slide:hover .show-more {
   opacity: 1;
-  height: 3.125rem;
+  height: 2.5rem;
 }
 
-.swiper-slide-active:hover p {
+.swiper-slide:hover p {
   display: block;
   overflow: visible;
 }

@@ -1,31 +1,33 @@
-"""旅行规划 API 路由 - WebSocket 同步 + 轮询兼容模式"""
+"""旅行规划 API 路由 - WebSocket 同步 + 轮询兼容模式（数据库持久化 + 用户隔离）"""
 
 import asyncio
-import json
 import traceback
-import uuid
-from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from sqlalchemy import select
 
 from ...agents.trip_planner_agent import get_trip_planner_agent
+from ...database import AsyncSessionLocal
+from ...models.db_models import TripTaskRecord, User
 from ...models.schemas import TripPlanResponse, TripRequest
+from ...services.auth_service import decode_access_token, generate_task_id
 from ...services.knowledge_graph_service import build_knowledge_graph
+from ..deps import get_current_user
 
 router = APIRouter(prefix="/trip", tags=["旅行规划"])
 
-# 内存任务存储（单实例部署足够）
+# 内存任务状态（含 WebSocket 订阅者队列；持久化在数据库）
 _tasks: Dict[str, Dict[str, Any]] = {}
 _FINAL_TASK_STATUS = {"completed", "failed"}
-_TASKS_DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "trip_tasks"
+_PRELOAD_LIMIT = 200
 
 
-def _create_task_state(task_id: str) -> Dict[str, Any]:
+def _create_task_state(task_id: str, user_id: int) -> Dict[str, Any]:
     """初始化任务状态。"""
     return {
         "task_id": task_id,
+        "user_id": user_id,
         "plan_id": task_id,
         "status": "processing",
         "stage": "submitted",
@@ -46,24 +48,40 @@ def _serialize_result(result: Any) -> Any:
     return result
 
 
-def _task_file_path(task_id: str) -> Path:
-    """获取任务持久化文件路径。"""
-    return _TASKS_DATA_DIR / f"{task_id}.json"
+async def _persist_task_state(task_id: str, task: Dict[str, Any]) -> None:
+    """将任务状态持久化到数据库。"""
+    try:
+        async with AsyncSessionLocal() as session:
+            record = await session.get(TripTaskRecord, task_id)
+            if record is None:
+                record = TripTaskRecord(task_id=task_id, user_id=task["user_id"])
+                session.add(record)
+            record.plan_id = task.get("plan_id", task_id)
+            record.status = task.get("status", "processing")
+            record.stage = task.get("stage", "")
+            record.progress = task.get("progress", 0)
+            record.message = str(task.get("message", ""))[:500]
+            record.error = task.get("error")
+            record.result = _serialize_result(task.get("result"))
+            record.request_payload = task.get("request_payload")
+            await session.commit()
+    except Exception as e:
+        print(f"⚠️  持久化任务 {task_id} 失败: {e}")
 
 
-def _normalize_loaded_task(task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    """将磁盘中的任务结构恢复为内存可用格式。"""
-    task = _create_task_state(task_id)
+def _normalize_loaded_task(record: TripTaskRecord) -> Dict[str, Any]:
+    """将数据库记录恢复为内存可用格式。"""
+    task = _create_task_state(record.task_id, record.user_id)
     task.update(
         {
-            "plan_id": payload.get("plan_id", task_id),
-            "status": payload.get("status", "failed"),
-            "stage": payload.get("stage", "failed"),
-            "progress": payload.get("progress", 100),
-            "message": payload.get("message", ""),
-            "result": payload.get("result"),
-            "error": payload.get("error"),
-            "request_payload": payload.get("request_payload"),
+            "plan_id": record.plan_id or record.task_id,
+            "status": record.status,
+            "stage": record.stage,
+            "progress": record.progress,
+            "message": record.message,
+            "result": record.result,
+            "error": record.error,
+            "request_payload": record.request_payload,
         }
     )
     task["subscribers"] = []
@@ -79,84 +97,50 @@ def _normalize_loaded_task(task_id: str, payload: Dict[str, Any]) -> Dict[str, A
     return task
 
 
-def _persist_task_state(task_id: str, task: Dict[str, Any]) -> None:
-    """将任务状态持久化到本地 JSON 文件。"""
-    try:
-        _TASKS_DATA_DIR.mkdir(parents=True, exist_ok=True)
-        payload = {
-            "task_id": task_id,
-            "plan_id": task.get("plan_id", task_id),
-            "status": task.get("status", "processing"),
-            "stage": task.get("stage", ""),
-            "progress": task.get("progress", 0),
-            "message": task.get("message", ""),
-            "result": _serialize_result(task.get("result")),
-            "error": task.get("error"),
-            "request_payload": task.get("request_payload"),
-        }
-        target = _task_file_path(task_id)
-        tmp = target.with_suffix(".json.tmp")
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
-        tmp.replace(target)
-    except Exception as e:
-        print(f"⚠️  持久化任务 {task_id} 失败: {e}")
-
-
-def _load_task_from_disk(task_id: str) -> Dict[str, Any] | None:
-    """从磁盘加载单个任务。"""
-    path = _task_file_path(task_id)
-    if not path.exists():
+async def _load_task_from_db(task_id: str) -> Dict[str, Any] | None:
+    """从数据库加载单个任务并缓存到内存。"""
+    async with AsyncSessionLocal() as session:
+        record = await session.get(TripTaskRecord, task_id)
+    if record is None:
         return None
+    task = _normalize_loaded_task(record)
+    _tasks[task_id] = task
+    return task
 
+
+async def load_persisted_tasks() -> None:
+    """服务启动时预加载最近的已完成任务到内存。"""
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            payload = json.load(f)
-        if not isinstance(payload, dict):
-            return None
-        task = _normalize_loaded_task(task_id, payload)
-        _tasks[task_id] = task
-        return task
+        async with AsyncSessionLocal() as session:
+            stmt = (
+                select(TripTaskRecord)
+                .order_by(TripTaskRecord.updated_at.desc())
+                .limit(_PRELOAD_LIMIT)
+            )
+            records = (await session.execute(stmt)).scalars().all()
     except Exception as e:
-        print(f"⚠️  读取任务 {task_id} 失败: {e}")
-        return None
-
-
-def _load_persisted_tasks() -> None:
-    """服务启动时预加载历史任务。"""
-    if not _TASKS_DATA_DIR.exists():
+        print(f"⚠️  加载历史任务失败: {e}")
         return
 
-    loaded = 0
-    for path in sorted(_TASKS_DATA_DIR.glob("*.json")):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                payload = json.load(f)
-            if not isinstance(payload, dict):
-                continue
-            task_id = str(payload.get("task_id") or path.stem)
-            _tasks[task_id] = _normalize_loaded_task(task_id, payload)
-            loaded += 1
-        except Exception as e:
-            print(f"⚠️  加载历史任务 {path.name} 失败: {e}")
-
-    if loaded:
-        print(f"📦 已加载 {loaded} 个持久化旅行任务")
+    for record in records:
+        _tasks[record.task_id] = _normalize_loaded_task(record)
+    if records:
+        print(f"📦 已从数据库加载 {len(records)} 个旅行任务")
 
 
-def _get_task(task_id: str) -> Dict[str, Any] | None:
-    """优先从内存读取任务，不存在时回退到磁盘。"""
-    return _tasks.get(task_id) or _load_task_from_disk(task_id)
+async def _get_task(task_id: str) -> Dict[str, Any] | None:
+    """优先从内存读取任务，不存在时回退到数据库。"""
+    return _tasks.get(task_id) or await _load_task_from_db(task_id)
 
 
-def _build_history_item(task_id: str, payload: Dict[str, Any], updated_at: str) -> Dict[str, Any] | None:
-    """从持久化任务中提取首页历史列表所需的摘要。"""
-    if payload.get("status") != "completed":
+def _build_history_item(record: TripTaskRecord) -> Dict[str, Any] | None:
+    """从数据库任务记录中提取首页历史列表所需的摘要。"""
+    if record.status != "completed":
         return None
 
-    result = payload.get("result") or {}
+    result = record.result or {}
     plan = result.get("data") or {}
-    request_payload = payload.get("request_payload") or {}
+    request_payload = record.request_payload or {}
 
     city = plan.get("city") or request_payload.get("city") or ""
     cities = plan.get("cities") or []
@@ -173,40 +157,16 @@ def _build_history_item(task_id: str, payload: Dict[str, Any], updated_at: str) 
     display_city = ' → '.join(cities) if len(cities) > 1 else city
 
     return {
-        "plan_id": payload.get("plan_id", task_id),
-        "task_id": task_id,
+        "plan_id": record.plan_id or record.task_id,
+        "task_id": record.task_id,
         "city": display_city,
         "cities": cities,
         "start_date": start_date,
         "end_date": end_date,
         "travel_days": travel_days,
-        "updated_at": updated_at,
+        "updated_at": record.updated_at.isoformat(timespec="seconds") if record.updated_at else "",
         "overall_suggestions": overall_suggestions,
     }
-
-
-def _load_history_items(limit: int = 10) -> list[Dict[str, Any]]:
-    """按最近更新时间返回已完成的历史计划摘要。"""
-    if not _TASKS_DATA_DIR.exists():
-        return []
-
-    items: list[Dict[str, Any]] = []
-    for path in sorted(_TASKS_DATA_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                payload = json.load(f)
-            if not isinstance(payload, dict):
-                continue
-            updated_at = datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds")
-            item = _build_history_item(str(payload.get("task_id") or path.stem), payload, updated_at)
-            if item:
-                items.append(item)
-            if len(items) >= limit:
-                break
-        except Exception as e:
-            print(f"⚠️  读取历史任务 {path.name} 失败: {e}")
-
-    return items
 
 
 def _build_task_event(task_id: str, task: Dict[str, Any], include_result: bool = True) -> Dict[str, Any]:
@@ -273,7 +233,7 @@ async def _update_task_state(
     if error is not None:
         task["error"] = error
 
-    _persist_task_state(task_id, task)
+    await _persist_task_state(task_id, task)
     event = _build_task_event(task_id, task, include_result=True)
     _broadcast_task_event(task_id, event)
 
@@ -281,18 +241,21 @@ async def _update_task_state(
 @router.post(
     "/plan",
     summary="提交旅行规划任务",
-    description="异步提交旅行规划请求，立即返回 task_id；可通过 WebSocket 或 /trip/status/{task_id} 获取执行状态",
+    description="异步提交旅行规划请求（需要登录），立即返回 task_id；可通过 WebSocket 或 /trip/status/{task_id} 获取执行状态",
 )
-async def plan_trip(request: TripRequest):
+async def plan_trip(
+    request: TripRequest,
+    user: User = Depends(get_current_user),
+):
     """提交旅行规划任务（立即返回 task_id）。"""
-    task_id = str(uuid.uuid4())[:8]
-    _tasks[task_id] = _create_task_state(task_id)
+    task_id = generate_task_id()
+    _tasks[task_id] = _create_task_state(task_id, user.id)
     _tasks[task_id]["request_payload"] = request.model_dump(mode="json")
-    _persist_task_state(task_id, _tasks[task_id])
+    await _persist_task_state(task_id, _tasks[task_id])
 
     _city_display = ' → '.join(cs.city for cs in request.cities) if request.cities else request.city
     print(f"\n{'=' * 60}")
-    print(f"📥 收到旅行规划请求 (task_id={task_id}):")
+    print(f"📥 收到旅行规划请求 (task_id={task_id}, user={user.username}):")
     print(f"   城市: {_city_display}")
     print(f"   日期: {request.start_date} - {request.end_date}")
     print(f"   天数: {request.travel_days}")
@@ -395,10 +358,30 @@ async def _run_trip_planning(task_id: str, request: TripRequest):
 
 @router.websocket("/ws/{task_id}")
 async def trip_task_ws(websocket: WebSocket, task_id: str):
-    """WebSocket 订阅任务状态。"""
+    """WebSocket 订阅任务状态（通过 ?token= 传递访问令牌）。"""
     await websocket.accept()
-    task = _get_task(task_id)
-    if not task:
+
+    # WebSocket 无法携带 Authorization 头，改用 query 参数校验令牌
+    token = websocket.query_params.get("token")
+    user_id = decode_access_token(token) if token else None
+    if user_id is None:
+        await websocket.send_json(
+            {
+                "task_id": task_id,
+                "plan_id": task_id,
+                "status": "failed",
+                "stage": "failed",
+                "progress": 100,
+                "message": "未登录或令牌已失效",
+                "error": "未登录或令牌已失效",
+            }
+        )
+        await websocket.close(code=1008)
+        return
+
+    task = await _get_task(task_id)
+    if not task or task.get("user_id") != user_id:
+        # 任务不存在或无权访问（不泄露他人任务是否存在）
         await websocket.send_json(
             {
                 "task_id": task_id,
@@ -448,25 +431,36 @@ async def trip_task_ws(websocket: WebSocket, task_id: str):
 @router.get(
     "/history",
     summary="最近历史计划",
-    description="返回最近成功生成的旅行计划摘要，供首页快速找回历史计划",
+    description="返回当前用户最近成功生成的旅行计划摘要（需要登录，按用户隔离）",
 )
-async def get_trip_history(limit: int = 10):
-    """查询最近的历史计划摘要。"""
+async def get_trip_history(limit: int = 10, user: User = Depends(get_current_user)):
+    """查询当前用户的历史计划摘要。"""
     safe_limit = max(1, min(int(limit or 10), 50))
+
+    async with AsyncSessionLocal() as session:
+        stmt = (
+            select(TripTaskRecord)
+            .where(TripTaskRecord.user_id == user.id, TripTaskRecord.status == "completed")
+            .order_by(TripTaskRecord.updated_at.desc())
+            .limit(safe_limit)
+        )
+        records = (await session.execute(stmt)).scalars().all()
+
+    items = [item for record in records if (item := _build_history_item(record)) is not None]
     return {
-        "items": _load_history_items(safe_limit),
+        "items": items,
     }
 
 
 @router.get(
     "/status/{task_id}",
     summary="查询任务状态",
-    description="轮询旅行规划任务的执行状态和结果（兼容旧客户端）",
+    description="轮询旅行规划任务的执行状态和结果（需要登录，仅可访问自己的任务）",
 )
-async def get_task_status(task_id: str):
+async def get_task_status(task_id: str, user: User = Depends(get_current_user)):
     """查询任务执行状态。"""
-    task = _get_task(task_id)
-    if task is None:
+    task = await _get_task(task_id)
+    if task is None or task.get("user_id") != user.id:
         raise HTTPException(status_code=404, detail="任务不存在")
 
     if task["status"] == "completed":
@@ -511,6 +505,3 @@ async def health_check():
         }
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"服务不可用: {str(e)}")
-
-
-_load_persisted_tasks()
