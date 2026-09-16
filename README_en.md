@@ -244,33 +244,3 @@ TripStar/
 ├── docker-compose.yaml            # Single-node Compose Setup
 └── README_en.md
 ```
-> Below are some of the operation results, exploring rich functions...
-<img width="1599" height="823" alt="image" src="https://github.com/user-attachments/assets/0af91914-a087-496f-8a69-caed6748374d" />
-<img width="1649" height="805" alt="image" src="https://github.com/user-attachments/assets/c1d08148-6f81-4428-b10d-ff51083af1a6" />
-<img width="1598" height="801" alt="image" src="https://github.com/user-attachments/assets/1b4b745e-98f1-4868-a6dd-d32909077713" />
-
-
-## Future Optimizations
-- [x] ~~Xiaohongshu Integration~~
-- [x] ~~Attraction Images via Xiaohongshu Search~~
-- [x] ~~Attraction Reservation Prompts~~
-- [x] ~~Google Maps Dual-Engine Fallback~~
-- [x] ~~i18n Multi-Language Model Inference Adaptation & Deep Knowledge Graph Translation~~
-- [x] ~~History Plans Record Support~~
-- [x] ~~HTTP/SOCKS5 Proxy Config~~
-- [x] ~~Better Export Image aesthetics~~
-- [x] ~~Multi-City Travel Planning~~
-- [ ] Advanced Dining Recommendations
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=1sdv%2FTripStar&type=date&logscale=&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=1sdv/TripStar&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=1sdv/TripStar&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=1sdv/TripStar&type=date&legend=top-left" />
- </picture>
-</a>
-
-## 🙏 Acknowledgements
-Thanks to the [linux.do](https://linux.do/) community for communication and feedback, making TripStar iterate more efficiently.
